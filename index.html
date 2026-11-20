@@ -2,30 +2,29 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     
-    <!-- Meta tag specifici PWA & iOS Safari Full-Screen -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Subbuteo">
+    <meta name="apple-mobile-web-app-title" content="Subbuteo Match">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0f4d25">
     <meta name="description" content="Tabellone segnapunti, cronometro e fischietto arbitro in stile Subbuteo.">
 
     <title>Subbuteo Match - Tabellone & Cronometro PWA</title>
 
-    <!-- Icone & Manifest generati dinamicamente via JavaScript -->
-    <link id="appleTouchIcon" rel="apple-touch-icon" sizes="180x180" href="">
-    <link id="faviconIcon" rel="icon" type="image/png" href="">
-    <link id="pwaManifest" rel="manifest" href="">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="manifest" href="./manifest.webmanifest">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./tailwind.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --pitch-green: #0f4d25;
+            --pitch-dark: #093017;
             --board-black: #18181b;
             --board-frame: #f8fafc;
         }
@@ -42,43 +41,86 @@
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             user-select: none;
+        }
+
+        body {
             padding-top: max(12px, env(safe-area-inset-top));
             padding-bottom: max(14px, env(safe-area-inset-bottom));
             padding-left: max(12px, env(safe-area-inset-left));
             padding-right: max(12px, env(safe-area-inset-right));
         }
 
-        .font-scoreboard { font-family: 'Bebas Neue', 'Oswald', sans-serif; letter-spacing: 0.04em; }
-        .font-condensed { font-family: 'Oswald', sans-serif; }
+        .font-scoreboard {
+            font-family: 'Bebas Neue', 'Oswald', sans-serif;
+            letter-spacing: 0.04em;
+        }
+
+        .font-condensed {
+            font-family: 'Oswald', sans-serif;
+        }
 
         .pitch-lines {
-            position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.17; width: 100%; height: 100%;
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.17;
         }
 
         .subbuteo-pediment {
-            position: relative; background: var(--board-black); border: 3px solid var(--board-frame);
-            border-bottom: none; border-radius: 10px 10px 0 0; box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
+            position: relative;
+            background: var(--board-black);
+            border: 3px solid var(--board-frame);
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
         }
+
         .subbuteo-pediment::before {
-            content: ''; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-            width: 56%; height: 12px; background: var(--board-black); border: 3px solid var(--board-frame);
-            border-bottom: none; border-radius: 6px 6px 0 0;
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56%;
+            height: 12px;
+            background: var(--board-black);
+            border: 3px solid var(--board-frame);
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
         }
 
         .subbuteo-board {
-            background: linear-gradient(180deg, #1f1f23 0%, #121215 100%); border: 3px solid var(--board-frame);
-            border-radius: 14px; box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            background: linear-gradient(180deg, #1f1f23 0%, #121215 100%);
+            border: 3px solid var(--board-frame);
+            border-radius: 14px;
+            box-shadow:
+                0 20px 35px -10px rgba(0, 0, 0, 0.78),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
 
         .score-card {
             background: linear-gradient(180deg, #09090b 0%, #18181b 49%, #09090b 51%, #141417 100%);
-            border: 2px solid #e2e8f0; border-radius: 10px;
-            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.9), 0 4px 8px rgba(0, 0, 0, 0.5);
-            position: relative; perspective: 600px; transform-style: preserve-3d;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.9), 0 4px 8px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+            perspective: 600px;
+            transform-style: preserve-3d;
         }
+
         .score-card::after {
-            content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px;
-            background: rgba(255, 255, 255, 0.15); pointer-events: none;
+            content: '';
+            position: absolute;
+            left: 0; right: 0; top: 50%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            pointer-events: none;
+        }
+
+        .score-flip {
+            animation: cardFlip 0.42s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         @keyframes cardFlip {
@@ -87,27 +129,38 @@
             70% { transform: rotateX(15deg) scale(1.03); border-color: #eab308; }
             100% { transform: rotateX(0deg) scale(1); }
         }
-        .score-flip { animation: cardFlip 0.42s cubic-bezier(0.22, 1, 0.36, 1); }
 
         @keyframes goalFlash {
-            0%, 100% { box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.78); }
+            0%, 100% { box-shadow: 0 20px 35px -10px rgba(0,0,0,0.78); }
             50% { box-shadow: 0 0 38px 10px rgba(234, 179, 8, 0.85); }
         }
-        .goal-celebration { animation: goalFlash 0.55s ease-in-out 2; }
+
+        .goal-celebration {
+            animation: goalFlash 0.55s ease-in-out 2;
+        }
 
         .btn-tactile {
-            transition: transform 0.08s ease, box-shadow 0.08s ease; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.68);
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.68);
         }
-        .btn-tactile:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.68); }
+
+        .btn-tactile:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.68);
+        }
 
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .score-flip, .goal-celebration { animation: none; }
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-between">
 
-    <svg class="pitch-lines" viewBox="0 0 400 800" preserveAspectRatio="none">
+    <svg class="pitch-lines" viewBox="0 0 400 800" preserveAspectRatio="none" aria-hidden="true">
         <rect x="16" y="16" width="368" height="768" fill="none" stroke="white" stroke-width="3"/>
         <line x1="16" y1="400" x2="384" y2="400" stroke="white" stroke-width="3"/>
         <circle cx="200" cy="400" r="65" fill="none" stroke="white" stroke-width="3"/>
@@ -120,16 +173,12 @@
         <div class="flex items-center gap-2">
             <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 border border-white/25 text-sm shadow">⚽</span>
             <div>
-                <h1 class="font-condensed font-bold text-sm sm:text-base tracking-wider uppercase text-white leading-none">
-                    Subbuteo Match
-                </h1>
-                <p id="wakeLockStatus" class="text-[10px] text-emerald-300/80 font-medium mt-0.5">
-                    Pronto al calcio d'inizio
-                </p>
+                <h1 class="font-condensed font-bold text-sm sm:text-base tracking-wider uppercase text-white leading-none">Subbuteo Match</h1>
+                <p id="wakeLockStatus" class="text-[10px] text-emerald-300/80 font-medium mt-0.5">Pronto al calcio d'inizio</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button id="muteBtn" onclick="toggleMute()" class="btn-tactile flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-600 text-white hover:bg-zinc-700">
+            <button id="muteBtn" onclick="toggleMute()" aria-label="Disattiva audio" aria-pressed="false" class="btn-tactile flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-600 text-white hover:bg-zinc-700">
                 <span id="muteIcon" class="text-lg">🔊</span>
             </button>
             <button onclick="openSettingsModal()" class="btn-tactile flex items-center gap-1.5 px-3 h-10 rounded-xl bg-amber-500 border border-amber-300 text-zinc-950 font-bold text-xs uppercase tracking-wide hover:bg-amber-400">
@@ -139,45 +188,44 @@
     </header>
 
     <main class="relative z-10 w-full max-w-md landscape:max-w-3xl flex-1 flex flex-col justify-center my-1">
-        <div class="mx-auto w-3/4 subbuteo-pediment py-1.5 px-3 text-center mt-2">
+        <div class="mx-auto w-3/4 landscape:w-1/2 subbuteo-pediment py-1.5 px-3 text-center mt-2">
             <span class="font-condensed font-bold text-xs sm:text-sm tracking-[0.22em] text-amber-400 uppercase">★ SUBBUTEO STADIUM ★</span>
         </div>
 
-        <section id="mainScoreboard" class="subbuteo-board p-3.5 sm:p-5">
-            <div class="flex flex-col landscape:flex-row gap-3 sm:gap-4 items-stretch justify-center">
+        <section id="mainScoreboard" class="subbuteo-board p-2.5 sm:p-4">
+            <div class="grid grid-cols-2 landscape:grid-cols-3 gap-2 sm:gap-4 items-stretch justify-center">
                 
-                <!-- CRONOMETRO E COMANDI (Al centro in landscape) -->
-                <div class="landscape:w-1/3 flex flex-col order-1 landscape:order-2 bg-zinc-950/90 border-2 border-zinc-700 rounded-xl p-3 text-center shadow-inner">
-                    <div class="flex items-center justify-between mb-1">
-                        <span id="halfDurationBadge" class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">Tempo: 10:00</span>
-                        <span id="periodBadge" class="font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-emerald-600 text-white shadow">1° TEMPO</span>
-                        <button onclick="openSettingsModal()" class="text-[11px] text-amber-400 hover:underline font-semibold">Modifica</button>
+                <!-- CRONOMETRO E COMANDI -->
+                <div class="col-span-2 landscape:col-span-1 flex flex-col order-1 landscape:order-2 bg-zinc-950/90 border-2 border-zinc-700 rounded-xl p-2 sm:p-3 text-center shadow-inner">
+                    <div class="flex flex-wrap items-center justify-between gap-1 mb-1">
+                        <span id="halfDurationBadge" class="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">Tempo: 10m</span>
+                        <span id="periodBadge" class="font-condensed font-bold text-[10px] sm:text-xs uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-600 text-white shadow">1° TEMPO</span>
+                        <button onclick="openSettingsModal()" class="text-[10px] sm:text-[11px] text-amber-400 hover:underline font-semibold">Modifica</button>
                     </div>
                     <div id="timerDisplay" class="font-scoreboard text-6xl sm:text-7xl text-amber-400 leading-none my-1 drop-shadow-[0_2px_8px_rgba(234,179,8,0.3)]">
                         10:00
                     </div>
-                    <div class="grid grid-cols-3 gap-2 mt-2.5">
-                        <button id="startPauseBtn" onclick="toggleTimer()" class="btn-tactile col-span-2 py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2">
+                    <div class="flex flex-col sm:flex-row gap-1.5 mt-2">
+                        <button id="startPauseBtn" onclick="toggleTimer()" class="btn-tactile flex-1 py-2 sm:py-3 px-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-sm sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-1.5">
                             <span id="startPauseIcon">▶</span>
-                            <span id="startPauseText">AVVIA TEMPO</span>
+                            <span id="startPauseText">AVVIA</span>
                         </button>
-                        <button onclick="playSingleWhistle()" class="btn-tactile py-3 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 border border-amber-300 font-condensed font-bold text-sm sm:text-base tracking-wide uppercase text-zinc-950 flex items-center justify-center gap-1">
-                            <span>📣</span><span>FISCHIO</span>
+                        <button onclick="playSingleWhistle()" aria-label="Fischio" class="btn-tactile py-2 sm:py-3 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 border border-amber-300 font-condensed font-bold text-sm sm:text-base tracking-wide uppercase text-zinc-950 flex items-center justify-center gap-1">
+                            <span>📣</span><span class="hidden sm:inline">FISCHIO</span>
                         </button>
                     </div>
-                    <div class="flex items-center justify-center gap-2 sm:gap-3 mt-2.5 pt-2 border-t border-zinc-800/90 text-xs">
-                        <span class="text-zinc-400 font-medium hidden sm:inline">Regola:</span>
-                        <button onclick="adjustTime(-60)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">-1m</button>
-                        <button onclick="adjustTime(-10)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">-10s</button>
-                        <button onclick="adjustTime(10)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">+10s</button>
-                        <button onclick="adjustTime(60)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">+1m</button>
+                    <div class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 mt-2 pt-2 border-t border-zinc-800/90 text-xs">
+                        <button onclick="adjustTime(-60)" class="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">-1m</button>
+                        <button onclick="adjustTime(-10)" class="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">-10s</button>
+                        <button onclick="adjustTime(10)" class="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">+10s</button>
+                        <button onclick="adjustTime(60)" class="px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">+1m</button>
                     </div>
                 </div>
 
-                <!-- SQUADRA CASA (A sinistra in landscape) -->
-                <div class="landscape:w-1/3 flex flex-col items-center bg-zinc-900/80 border border-zinc-700/80 rounded-xl p-2.5 sm:p-3 order-2 landscape:order-1">
-                    <div onclick="openSettingsModal()" class="cursor-pointer mb-1.5 group">
-                        <svg class="w-14 h-12 drop-shadow-md transition-transform group-hover:scale-105" viewBox="0 0 80 68">
+                <!-- SQUADRA CASA -->
+                <div class="col-span-1 flex flex-col items-center bg-zinc-900/80 border border-zinc-700/80 rounded-xl p-2 sm:p-3 order-2 landscape:order-1">
+                    <button onclick="openSettingsModal()" aria-label="Impostazioni squadra di casa" class="cursor-pointer mb-1.5 group">
+                        <svg class="w-12 h-10 sm:w-14 sm:h-12 drop-shadow-md transition-transform group-hover:scale-105" viewBox="0 0 80 68" aria-hidden="true">
                             <ellipse cx="40" cy="60" rx="28" ry="6" fill="rgba(0,0,0,0.5)"/>
                             <path id="homeBasePath" d="M12 46 C12 58, 68 58, 68 46 L62 38 L18 38 Z" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
                             <ellipse id="homeInnerBase" cx="40" cy="39" rx="22" ry="6" fill="#ffffff"/>
@@ -185,21 +233,21 @@
                             <rect id="homeSleeves" x="34" y="16" width="12" height="10" rx="3" fill="#dc2626"/>
                             <circle cx="40" cy="10" r="5" fill="#fde047"/>
                         </svg>
+                    </button>
+                    <button onclick="quickRenameTeam('home')" id="homeNameDisplay" class="w-full font-condensed font-bold text-base sm:text-xl uppercase tracking-wider text-white bg-zinc-950 border border-zinc-600 rounded-lg py-1 px-1 sm:px-2 mb-2 truncate hover:border-amber-400 transition-colors">CASA</button>
+                    <div id="homeScoreCard" class="score-card w-full py-1.5 sm:py-3 flex items-center justify-center mb-2 sm:mb-3">
+                        <span id="homeScoreDisplay" class="font-scoreboard text-5xl sm:text-8xl text-white leading-none">0</span>
                     </div>
-                    <button onclick="quickRenameTeam('home')" id="homeNameDisplay" class="w-full font-condensed font-bold text-lg sm:text-xl uppercase tracking-wider text-white bg-zinc-950 border border-zinc-600 rounded-lg py-1 px-2 mb-2.5 truncate hover:border-amber-400 transition-colors">CASA</button>
-                    <div id="homeScoreCard" class="score-card w-full py-2 sm:py-3 flex items-center justify-center mb-3">
-                        <span id="homeScoreDisplay" class="font-scoreboard text-7xl sm:text-8xl text-white leading-none">0</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1.5 w-full">
-                        <button onclick="updateScore('home', -1)" class="btn-tactile col-span-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-xl text-zinc-300">−</button>
-                        <button onclick="updateScore('home', 1)" class="btn-tactile col-span-2 py-3 rounded-xl bg-red-600 hover:bg-red-500 border border-red-400 font-condensed font-bold text-xl tracking-wider text-white">+ GOL</button>
+                    <div class="grid grid-cols-3 gap-1 w-full">
+                        <button onclick="updateScore('home', -1)" aria-label="Annulla gol casa" class="btn-tactile col-span-1 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-base sm:text-xl text-zinc-300">−</button>
+                        <button onclick="updateScore('home', 1)" class="btn-tactile col-span-2 py-2 sm:py-3 rounded-xl bg-red-600 hover:bg-red-500 border border-red-400 font-condensed font-bold text-sm sm:text-xl tracking-wide sm:tracking-wider text-white">+ GOL</button>
                     </div>
                 </div>
 
-                <!-- SQUADRA OSPITI (A destra in landscape) -->
-                <div class="landscape:w-1/3 flex flex-col items-center bg-zinc-900/80 border border-zinc-700/80 rounded-xl p-2.5 sm:p-3 order-3 landscape:order-3">
-                    <div onclick="openSettingsModal()" class="cursor-pointer mb-1.5 group">
-                        <svg class="w-14 h-12 drop-shadow-md transition-transform group-hover:scale-105" viewBox="0 0 80 68">
+                <!-- SQUADRA OSPITI -->
+                <div class="col-span-1 flex flex-col items-center bg-zinc-900/80 border border-zinc-700/80 rounded-xl p-2 sm:p-3 order-3 landscape:order-3">
+                    <button onclick="openSettingsModal()" aria-label="Impostazioni squadra ospite" class="cursor-pointer mb-1.5 group">
+                        <svg class="w-12 h-10 sm:w-14 sm:h-12 drop-shadow-md transition-transform group-hover:scale-105" viewBox="0 0 80 68" aria-hidden="true">
                             <ellipse cx="40" cy="60" rx="28" ry="6" fill="rgba(0,0,0,0.5)"/>
                             <path id="awayBasePath" d="M12 46 C12 58, 68 58, 68 46 L62 38 L18 38 Z" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
                             <ellipse id="awayInnerBase" cx="40" cy="39" rx="22" ry="6" fill="#ffffff"/>
@@ -207,14 +255,14 @@
                             <rect id="awaySleeves" x="34" y="16" width="12" height="10" rx="3" fill="#2563eb"/>
                             <circle cx="40" cy="10" r="5" fill="#fde047"/>
                         </svg>
+                    </button>
+                    <button onclick="quickRenameTeam('away')" id="awayNameDisplay" class="w-full font-condensed font-bold text-base sm:text-xl uppercase tracking-wider text-white bg-zinc-950 border border-zinc-600 rounded-lg py-1 px-1 sm:px-2 mb-2 truncate hover:border-amber-400 transition-colors">OSPITI</button>
+                    <div id="awayScoreCard" class="score-card w-full py-1.5 sm:py-3 flex items-center justify-center mb-2 sm:mb-3">
+                        <span id="awayScoreDisplay" class="font-scoreboard text-5xl sm:text-8xl text-white leading-none">0</span>
                     </div>
-                    <button onclick="quickRenameTeam('away')" id="awayNameDisplay" class="w-full font-condensed font-bold text-lg sm:text-xl uppercase tracking-wider text-white bg-zinc-950 border border-zinc-600 rounded-lg py-1 px-2 mb-2.5 truncate hover:border-amber-400 transition-colors">OSPITI</button>
-                    <div id="awayScoreCard" class="score-card w-full py-2 sm:py-3 flex items-center justify-center mb-3">
-                        <span id="awayScoreDisplay" class="font-scoreboard text-7xl sm:text-8xl text-white leading-none">0</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-1.5 w-full">
-                        <button onclick="updateScore('away', -1)" class="btn-tactile col-span-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-xl text-zinc-300">−</button>
-                        <button onclick="updateScore('away', 1)" class="btn-tactile col-span-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400 font-condensed font-bold text-xl tracking-wider text-white">+ GOL</button>
+                    <div class="grid grid-cols-3 gap-1 w-full">
+                        <button onclick="updateScore('away', -1)" aria-label="Annulla gol ospiti" class="btn-tactile col-span-1 py-2 sm:py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-base sm:text-xl text-zinc-300">−</button>
+                        <button onclick="updateScore('away', 1)" class="btn-tactile col-span-2 py-2 sm:py-3 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400 font-condensed font-bold text-sm sm:text-xl tracking-wide sm:tracking-wider text-white">+ GOL</button>
                     </div>
                 </div>
             </div>
@@ -223,11 +271,17 @@
             <div id="periodActionBanner" class="hidden mt-3 p-2.5 rounded-xl bg-amber-500/20 border border-amber-400/60 flex-col gap-2">
                 <div class="flex items-center justify-between gap-2">
                     <span id="periodActionText" class="text-xs sm:text-sm font-semibold text-amber-200">Fine 1° Tempo! Pronto per la ripresa?</span>
-                    <button id="periodActionBtn" onclick="startNextPeriod()" class="btn-tactile shrink-0 px-3 py-1.5 rounded-lg bg-amber-400 text-zinc-950 font-condensed font-bold text-sm uppercase tracking-wide">Inizia 2° Tempo</button>
+                    <button id="periodActionBtn" onclick="startSecondHalf()" class="btn-tactile shrink-0 px-3 py-1.5 rounded-lg bg-amber-400 text-zinc-950 font-condensed font-bold text-sm uppercase tracking-wide">
+                        Inizia 2° Tempo
+                    </button>
                 </div>
-                <div id="fullTimeExtras" class="hidden grid grid-cols-2 gap-2 pt-1.5 border-t border-amber-400/30">
-                    <button onclick="startNextPeriod(true)" class="btn-tactile py-1.5 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-500 font-condensed font-bold text-xs uppercase tracking-wider text-white">⏱️ Supplementari</button>
-                    <button onclick="shareMatchResult()" class="btn-tactile py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-xs uppercase tracking-wider text-white">📤 Condividi Risultato</button>
+                <div id="fullTimeExtras" class="hidden grid-cols-2 gap-2 pt-1.5 border-t border-amber-400/30">
+                    <button id="extraTimeBtn" onclick="startExtraTime()" class="btn-tactile py-1.5 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-500 font-condensed font-bold text-xs uppercase tracking-wider text-white">
+                        ⏱️ Supplementari
+                    </button>
+                    <button id="fullTimeShareBtn" onclick="shareMatchResult()" class="btn-tactile py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-xs uppercase tracking-wider text-white">
+                        📤 Condividi
+                    </button>
                 </div>
             </div>
         </section>
@@ -239,81 +293,97 @@
                 <div class="flex items-center gap-1.5 text-[11px] text-zinc-400 uppercase font-bold tracking-wider mb-0.5">
                     <span>📋 Cronaca Partita</span>
                 </div>
-                <div id="matchLog" class="text-xs text-zinc-200 truncate font-medium">Calcio d'inizio pronto. Premi AVVIA TEMPO!</div>
+                <div id="matchLog" class="text-xs text-zinc-200 truncate font-medium">Calcio d'inizio pronto. Premi AVVIA!</div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-                <button onclick="shareMatchResult()" class="px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-xs font-semibold text-zinc-200">📤</button>
+                <button onclick="shareMatchResult()" aria-label="Condividi risultato" class="px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-xs font-semibold text-zinc-200">📤</button>
                 <button onclick="openLogModal()" class="px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-xs font-semibold text-zinc-200">Storico</button>
                 <button onclick="openResetModal()" class="px-2.5 py-2 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-700/70 text-xs font-semibold text-rose-200">Reset</button>
             </div>
         </div>
     </footer>
 
-    <!-- Modals (Settings, Rename, Log, Reset) -->
-    <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
+    <div id="toastNotice" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 border border-emerald-400 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl">
+        Risultato copiato negli appunti!
+    </div>
+
+    <dialog id="settingsModal" aria-labelledby="settingsTitle" class="m-auto w-11/12 max-w-md bg-transparent p-0 text-white backdrop:bg-black/80 backdrop:backdrop-blur-sm">
         <div class="bg-zinc-900 border-2 border-zinc-600 rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[90dvh] overflow-y-auto custom-scroll">
             <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
-                <h2 class="font-condensed font-bold text-xl uppercase tracking-wider text-amber-400">⚙️ Impostazioni</h2>
-                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-400 font-bold">✕</button>
+                <h2 id="settingsTitle" class="font-condensed font-bold text-xl uppercase tracking-wider text-amber-400">⚙️ Impostazioni</h2>
+                <button onclick="closeSettingsModal()" aria-label="Chiudi impostazioni" class="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white font-bold">✕</button>
             </div>
+
             <div class="space-y-4">
                 <div class="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
-                    <label class="block font-condensed font-bold text-sm uppercase text-zinc-300 mb-2">⏱️ Durata (Minuti)</label>
+                    <label for="halfMinutesInput" class="block font-condensed font-bold text-sm uppercase tracking-wider text-zinc-300 mb-2">⏱️ Durata (Minuti)</label>
                     <div class="grid grid-cols-4 gap-2 mb-2.5">
-                        <button onclick="setPresetMinutes(5)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">5 min</button>
-                        <button onclick="setPresetMinutes(10)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">10 min</button>
-                        <button onclick="setPresetMinutes(15)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">15 min</button>
-                        <button onclick="setPresetMinutes(20)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">20 min</button>
+                        <button onclick="setPresetMinutes(5)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">5</button>
+                        <button onclick="setPresetMinutes(10)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">10</button>
+                        <button onclick="setPresetMinutes(15)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">15</button>
+                        <button onclick="setPresetMinutes(20)" class="py-2 rounded-lg bg-zinc-800 border border-zinc-700 font-bold text-sm">20</button>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="text-xs text-zinc-400">Personalizzata:</span>
-                        <input id="halfMinutesInput" type="number" min="1" max="90" value="10" class="w-20 bg-zinc-800 border border-zinc-600 rounded-lg px-2 text-center text-white">
+                        <span class="text-xs text-zinc-400">Pers.:</span>
+                        <input id="halfMinutesInput" type="number" min="1" max="90" required value="10" class="w-16 bg-zinc-800 border border-zinc-600 rounded-lg px-2 py-1 text-center font-bold text-white">
                     </div>
                 </div>
+
                 <div class="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
-                    <label class="block font-condensed font-bold text-sm uppercase text-red-400 mb-2">🏠 Squadra Casa</label>
+                    <label for="homeNameInput" class="block font-condensed font-bold text-sm uppercase tracking-wider text-red-400 mb-2">🏠 Squadra Casa</label>
                     <input id="homeNameInput" type="text" maxlength="16" class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white font-bold uppercase mb-2.5">
-                    <div class="flex items-center justify-between gap-3 pt-1 border-t border-zinc-800/80">
-                        <label class="text-xs text-zinc-400 flex items-center gap-2">Maglia/Base: <input id="homePrimaryColor" type="color" class="w-8 h-8 cursor-pointer"></label>
-                        <label class="text-xs text-zinc-400 flex items-center gap-2">Piattello: <input id="homeSecondaryColor" type="color" class="w-8 h-8 cursor-pointer"></label>
+                    <div class="mb-2.5">
+                        <span class="block text-[11px] text-zinc-400 mb-1.5">Colori classici:</span>
+                        <div id="homeColorPresets" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                    <div class="flex justify-between gap-3 pt-1 border-t border-zinc-800">
+                        <label class="text-xs text-zinc-400 flex gap-2">Maglia: <input id="homePrimaryColor" type="color" class="w-8 h-8"></label>
+                        <label class="text-xs text-zinc-400 flex gap-2">Piattello: <input id="homeSecondaryColor" type="color" class="w-8 h-8"></label>
                     </div>
                 </div>
+
                 <div class="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
-                    <label class="block font-condensed font-bold text-sm uppercase text-blue-400 mb-2">✈️ Squadra Ospiti</label>
+                    <label for="awayNameInput" class="block font-condensed font-bold text-sm uppercase tracking-wider text-blue-400 mb-2">✈️ Squadra Ospiti</label>
                     <input id="awayNameInput" type="text" maxlength="16" class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white font-bold uppercase mb-2.5">
-                    <div class="flex items-center justify-between gap-3 pt-1 border-t border-zinc-800/80">
-                        <label class="text-xs text-zinc-400 flex items-center gap-2">Maglia/Base: <input id="awayPrimaryColor" type="color" class="w-8 h-8 cursor-pointer"></label>
-                        <label class="text-xs text-zinc-400 flex items-center gap-2">Piattello: <input id="awaySecondaryColor" type="color" class="w-8 h-8 cursor-pointer"></label>
+                    <div class="mb-2.5">
+                        <span class="block text-[11px] text-zinc-400 mb-1.5">Colori classici:</span>
+                        <div id="awayColorPresets" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                    <div class="flex justify-between gap-3 pt-1 border-t border-zinc-800">
+                        <label class="text-xs text-zinc-400 flex gap-2">Maglia: <input id="awayPrimaryColor" type="color" class="w-8 h-8"></label>
+                        <label class="text-xs text-zinc-400 flex gap-2">Piattello: <input id="awaySecondaryColor" type="color" class="w-8 h-8"></label>
                     </div>
                 </div>
+
                 <label class="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800 cursor-pointer">
-                    <span class="text-sm font-medium text-zinc-200">📣 Boato stadio al gol</span>
-                    <input id="goalSoundCheckbox" type="checkbox" class="w-5 h-5 accent-emerald-500 rounded">
+                    <span class="text-xs font-medium text-zinc-200">📣 Boato stadio al gol</span>
+                    <input id="goalSoundCheckbox" type="checkbox" checked class="w-5 h-5 accent-emerald-500 rounded">
                 </label>
             </div>
+
             <div class="grid grid-cols-2 gap-2.5 mt-5">
                 <button onclick="closeSettingsModal()" class="py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-sm">Annulla</button>
                 <button onclick="saveSettings()" class="py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm uppercase">Applica</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
-    <div id="renameModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
+    <dialog id="renameModal" aria-labelledby="renameModalTitle" class="m-auto w-11/12 max-w-xs bg-transparent p-0 text-white backdrop:bg-black/80 backdrop:backdrop-blur-sm">
         <div class="bg-zinc-900 border-2 border-zinc-600 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
-            <h3 id="renameModalTitle" class="font-condensed font-bold text-lg uppercase text-amber-400 mb-3">Rinomina Squadra</h3>
-            <input id="quickRenameInput" type="text" maxlength="16" class="w-full bg-zinc-950 border border-zinc-600 rounded-xl px-3 py-2 text-white font-bold uppercase text-center mb-4">
+            <h3 id="renameModalTitle" class="font-condensed font-bold text-lg uppercase tracking-wider text-amber-400 mb-3">Rinomina</h3>
+            <input id="quickRenameInput" type="text" maxlength="16" aria-label="Nome squadra" autofocus class="w-full bg-zinc-950 border border-zinc-600 rounded-xl px-3 py-2.5 text-white font-bold uppercase text-center text-lg mb-4">
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="closeRenameModal()" class="py-2 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-sm">Annulla</button>
                 <button onclick="confirmQuickRename()" class="py-2 rounded-xl bg-amber-500 text-zinc-950 font-bold text-sm">Conferma</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
-    <div id="logModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
+    <dialog id="logModal" aria-labelledby="logTitle" class="m-auto w-11/12 max-w-sm bg-transparent p-0 text-white backdrop:bg-black/80 backdrop:backdrop-blur-sm">
         <div class="bg-zinc-900 border-2 border-zinc-600 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
-            <div class="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3">
-                <h3 class="font-condensed font-bold text-lg uppercase text-amber-400">📋 Tabellino Eventi</h3>
-                <button onclick="closeLogModal()" class="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-400 font-bold">✕</button>
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5 mb-3">
+                <h3 id="logTitle" class="font-condensed font-bold text-lg uppercase tracking-wider text-amber-400">📋 Tabellino Eventi</h3>
+                <button onclick="closeLogModal()" aria-label="Chiudi tabellino" class="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-400 font-bold">✕</button>
             </div>
             <ul id="fullLogList" class="space-y-2 max-h-60 overflow-y-auto custom-scroll text-sm text-zinc-200"></ul>
             <div class="grid grid-cols-2 gap-2 mt-4">
@@ -321,230 +391,179 @@
                 <button onclick="closeLogModal()" class="py-2.5 rounded-xl bg-zinc-800 text-white font-semibold text-sm">Chiudi</button>
             </div>
         </div>
-    </div>
+    </dialog>
 
-    <div id="resetModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm items-center justify-center p-4">
-        <div class="bg-zinc-900 border-2 border-rose-700/70 rounded-2xl w-full max-w-xs p-5 shadow-2xl text-center">
+    <dialog id="resetModal" aria-labelledby="resetTitle" aria-describedby="resetDescription" class="m-auto w-11/12 max-w-xs bg-transparent p-0 text-white backdrop:bg-black/80 backdrop:backdrop-blur-sm">
+        <div class="bg-zinc-900 border-2 border-rose-700/70 rounded-2xl w-full max-w-xs p-5 text-center">
             <div class="text-3xl mb-2">⚠️</div>
-            <h3 class="font-condensed font-bold text-xl uppercase text-white mb-1">Nuova Partita?</h3>
-            <p class="text-xs text-zinc-400 mb-4">Il punteggio tornerà a 0 - 0 e il cronometro ripartirà dal 1° Tempo.</p>
+            <h3 id="resetTitle" class="font-condensed font-bold text-xl uppercase tracking-wider text-white mb-1">Nuova Partita?</h3>
+            <p id="resetDescription" class="text-xs text-zinc-400 mb-4">Il punteggio e il tempo verranno azzerati.</p>
             <div class="grid grid-cols-2 gap-2">
-                <button onclick="closeResetModal()" class="py-2 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-sm">Annulla</button>
-                <button onclick="confirmResetMatch()" class="py-2 rounded-xl bg-rose-600 text-white font-bold text-sm">Azzera Tutto</button>
+                <button onclick="closeResetModal()" class="py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-sm">Annulla</button>
+                <button onclick="confirmResetMatch()" class="py-2.5 rounded-xl bg-rose-600 text-white font-bold text-sm">Azzera Tutto</button>
             </div>
         </div>
-    </div>
-
-    <div id="toastNotice" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 border border-emerald-400 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl"></div>
+    </dialog>
 
     <script>
-        // === CORE STATE ===
-        const state = {
-            homeName: 'CASA', awayName: 'OSPITI',
-            homeScore: 0, awayScore: 0,
-            homeColor: '#dc2626', homeSecColor: '#ffffff',
-            awayColor: '#2563eb', awaySecColor: '#ffffff',
-            halfDuration: 600, // 10 min
-            timeRemaining: 600,
-            period: 1, // 1=1°T, 2=2°T, 3=Fine, 4=Supp1, 5=Supp2
-            isRunning: false,
-            isMuted: false,
-            goalSoundEnabled: true,
-            matchLog: [],
-            wakeLock: null
-        };
-        let timerInterval = null;
-        let audioCtx = null;
-        let teamToRename = null;
-
-        // === PWA & ICON GEN ===
-        function generateSubbuteoAppIcon(size) {
-            const c = document.createElement('canvas'); c.width = size; c.height = size;
-            const ctx = c.getContext('2d'); const s = size / 512;
-            const bgGrad = ctx.createRadialGradient(256*s, 220*s, 40*s, 256*s, 256*s, 360*s);
-            bgGrad.addColorStop(0, '#166534'); bgGrad.addColorStop(1, '#0b3d1d');
-            ctx.fillStyle = bgGrad; ctx.fillRect(0,0,size,size);
-            ctx.strokeStyle = 'rgba(255,255,255,0.78)'; ctx.lineWidth = 10*s; ctx.strokeRect(34*s, 34*s, 444*s, 444*s);
-            ctx.beginPath(); ctx.moveTo(34*s, 285*s); ctx.lineTo(478*s, 285*s); ctx.stroke();
-            ctx.beginPath(); ctx.arc(256*s, 285*s, 72*s, 0, Math.PI*2); ctx.stroke();
-            ctx.fillStyle = 'rgba(0,0,0,0.42)'; ctx.beginPath(); ctx.ellipse(230*s, 345*s, 108*s, 34*s, 0, 0, Math.PI*2); ctx.fill();
-            const baseGrad = ctx.createLinearGradient(125*s, 275*s, 335*s, 355*s);
-            baseGrad.addColorStop(0, '#ffffff'); baseGrad.addColorStop(0.65, '#e2e8f0'); baseGrad.addColorStop(1, '#94a3b8');
-            ctx.fillStyle = baseGrad; ctx.beginPath(); ctx.moveTo(128*s, 288*s); ctx.bezierCurveTo(128*s, 362*s, 332*s, 362*s, 332*s, 288*s); ctx.fill();
-            ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.ellipse(230*s, 288*s, 96*s, 24*s, 0, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fde047'; ctx.fillRect(212*s, 226*s, 14*s, 54*s); ctx.fillRect(234*s, 226*s, 14*s, 54*s);
-            ctx.fillStyle = '#1d4ed8'; ctx.fillRect(212*s, 250*s, 14*s, 22*s); ctx.fillRect(234*s, 250*s, 14*s, 22*s);
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(208*s, 206*s, 44*s, 24*s);
-            ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.roundRect(202*s, 148*s, 56*s, 60*s, 12*s); ctx.fill();
-            ctx.fillStyle = '#1d4ed8'; ctx.fillRect(202*s, 168*s, 56*s, 16*s);
-            ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(230*s, 124*s, 22*s, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#27272a'; ctx.beginPath(); ctx.arc(230*s, 118*s, 22*s, Math.PI, Math.PI*2); ctx.fill();
-            const bX = 378*s, bY = 328*s, bR = 44*s;
-            ctx.fillStyle = 'rgba(0,0,0,0.38)'; ctx.beginPath(); ctx.ellipse(bX, bY+38*s, 36*s, 11*s, 0, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(bX, bY, bR, 0, Math.PI*2); ctx.fill();
-            ctx.lineWidth = 4*s; ctx.strokeStyle = '#18181b'; ctx.stroke();
-            ctx.fillStyle = '#18181b'; ctx.beginPath();
-            for (let i=0; i<5; i++) {
-                const a = (i*2*Math.PI/5)-Math.PI/2;
-                const px = bX + Math.cos(a)*18*s, py = bY + Math.sin(a)*18*s;
-                i===0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
-            }
-            ctx.fill(); return c.toDataURL('image/png');
-        }
-
         function setupPWA() {
-            try {
-                const icon = generateSubbuteoAppIcon(180);
-                document.getElementById('appleTouchIcon').href = icon;
-                document.getElementById('faviconIcon').href = icon;
-                const man = { name: "Subbuteo Match", display: "standalone", background_color: "#0f4d25", theme_color: "#0f4d25", icons: [{src: icon, sizes: "180x180", type: "image/png"}] };
-                document.getElementById('pwaManifest').href = URL.createObjectURL(new Blob([JSON.stringify(man)], {type: 'application/manifest+json'}));
-                
-                if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
-                    const swCode = `
-                        const CACHE_NAME = 'subbuteo-pwa-v6';
-                        self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll([self.location.href]))); });
-                        self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
-                        self.addEventListener('fetch', (e) => {
-                            e.respondWith(
-                                caches.match(e.request).then((c) => {
-                                    return c || fetch(e.request).then(r => {
-                                        if(r.status===200) caches.open(CACHE_NAME).then(ca => ca.put(e.request, r.clone()));
-                                        return r;
-                                    }).catch(() => {
-                                        // Ritorna la pagina dalla cache se l'accesso internet o il server Github fallisce (es. repo privato)
-                                        if (e.request.mode === 'navigate') return caches.match(self.location.href);
-                                    });
-                                })
-                            );
-                        });
-                    `;
-                    navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], {type: 'application/javascript'}))).catch(()=>{});
-                }
-            } catch(e) {}
-        }
-
-        // === AUDIO SYSTEM ===
-        function initAudioContext() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-        }
-
-        function triggerWhistleBlast(time, duration) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), mod = audioCtx.createOscillator(), modGain = audioCtx.createGain();
-            osc.type = 'triangle'; osc.frequency.setValueAtTime(2800, time);
-            osc.frequency.linearRampToValueAtTime(2950, time + duration/2);
-            osc.frequency.linearRampToValueAtTime(2800, time + duration);
-            mod.type = 'sine'; mod.frequency.value = 60; modGain.gain.value = 400; mod.connect(modGain); modGain.connect(osc.frequency);
-            gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(1, time + 0.05);
-            gain.gain.linearRampToValueAtTime(1, time + duration - 0.05); gain.gain.linearRampToValueAtTime(0, time + duration);
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(time); mod.start(time); osc.stop(time + duration); mod.stop(time + duration);
-        }
-
-        function playSingleWhistle() {
-            if (state.isMuted) return; initAudioContext();
-            if (audioCtx) triggerWhistleBlast(audioCtx.currentTime, 0.4);
-        }
-
-        function playPeriodEndWhistle(fullTime = false) {
-            if (state.isMuted) return; initAudioContext();
-            if (!audioCtx) return;
-            const now = audioCtx.currentTime;
-            triggerWhistleBlast(now, 0.3); triggerWhistleBlast(now + 0.4, 0.3);
-            if (fullTime) triggerWhistleBlast(now + 0.8, 1.0);
-        }
-
-        function playGoalRoar() {
-            if (state.isMuted || !state.goalSoundEnabled) return;
-            initAudioContext(); if (!audioCtx) return;
-            const now = audioCtx.currentTime, dur = 4.0;
-            
-            // Master e Inviluppo del boato
-            const masterGain = audioCtx.createGain();
-            masterGain.gain.setValueAtTime(0, now);
-            masterGain.gain.linearRampToValueAtTime(0.85, now + 0.3); // Esplosione gol rapida
-            masterGain.gain.exponentialRampToValueAtTime(0.4, now + 1.5); // Plateau
-            masterGain.gain.linearRampToValueAtTime(0, now + dur); // Dissolvenza naturale
-            masterGain.connect(audioCtx.destination);
-
-            // Effetto Stadio (Eco / Riverbero degli spalti)
-            const delay = audioCtx.createDelay();
-            delay.delayTime.value = 0.18; // 180ms
-            const delayGain = audioCtx.createGain(); delayGain.gain.value = 0.35;
-            const delayFilter = audioCtx.createBiquadFilter(); delayFilter.type = 'lowpass'; delayFilter.frequency.value = 800;
-            masterGain.connect(delay); delay.connect(delayFilter); delayFilter.connect(delayGain);
-            delayGain.connect(delay); delayGain.connect(audioCtx.destination);
-
-            // 1. Generazione Rumore Rosa (La massa caotica della folla)
-            const sr = audioCtx.sampleRate, fc = sr * dur;
-            const pBuf = audioCtx.createBuffer(1, fc, sr), pData = pBuf.getChannelData(0);
-            let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
-            for(let i=0; i<fc; i++){
-                const w = Math.random()*2-1;
-                b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759; b2=0.969*b2+w*0.153852;
-                b3=0.8665*b3+w*0.3104856; b4=0.55*b4+w*0.5329522; b5=-0.7616*b5-w*0.016898;
-                pData[i] = (b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.15; b6=w*0.115926;
+            if ('serviceWorker' in navigator && window.isSecureContext && window.location.protocol !== 'file:') {
+                navigator.serviceWorker.register('./sw.js').catch(error => console.warn('Subbuteo offline setup failed:', error));
             }
-            const noiseSrc = audioCtx.createBufferSource(); noiseSrc.buffer = pBuf;
-            noiseSrc.start(now); noiseSrc.stop(now + dur);
+        }
 
-            // Filtro Corpo: Rimbombo basso
-            const lowFilter = audioCtx.createBiquadFilter(); lowFilter.type = 'lowpass'; lowFilter.frequency.value = 250;
-            const lowGain = audioCtx.createGain(); lowGain.gain.value = 1.5;
-            noiseSrc.connect(lowFilter).connect(lowGain).connect(masterGain);
+        const classicColors = [
+            { name: "Rosso", p: "#dc2626", s: "#ffffff" },
+            { name: "Blu", p: "#2563eb", s: "#ffffff" },
+            { name: "Bianco", p: "#ffffff", s: "#18181b" },
+            { name: "Nero", p: "#18181b", s: "#ffffff" },
+            { name: "Giallo", p: "#facc15", s: "#1d4ed8" },
+            { name: "Verde", p: "#16a34a", s: "#ffffff" },
+            { name: "Granata", p: "#9f1239", s: "#ffffff" },
+            { name: "Azzurro", p: "#38bdf8", s: "#ffffff" }
+        ];
 
-            // Filtro Formante: Simula l'apertura della bocca della folla (da O a A)
-            const midFilter = audioCtx.createBiquadFilter(); midFilter.type = 'bandpass';
-            midFilter.frequency.setValueAtTime(450, now); 
-            midFilter.frequency.linearRampToValueAtTime(700, now + 0.8); // Si apre verso gli acuti
-            midFilter.frequency.linearRampToValueAtTime(500, now + dur);
-            midFilter.Q.value = 1.2;
-            const midGain = audioCtx.createGain(); midGain.gain.value = 2.0;
-            noiseSrc.connect(midFilter).connect(midGain).connect(masterGain);
+        let state = {
+            homeName: "CASA", awayName: "OSPITI",
+            homeScore: 0, awayScore: 0,
+            homeColors: { primary: "#dc2626", secondary: "#ffffff" },
+            awayColors: { primary: "#2563eb", secondary: "#ffffff" },
+            halfDurationMinutes: 10, timeRemaining: 10 * 60, period: 1, // 1, 2, 3(End), 4(Ext1), 5(Ext2)
+            isRunning: false, isMuted: false, goalSoundEnabled: true,
+            matchLog: [], wakeLock: null
+        };
 
-            // 2. Voci Umane Tonalizzate (Tanti "OOOH" sfalsati)
-            const voices = [120, 124, 145, 150, 220, 228, 300];
-            voices.forEach(freq => {
-                const osc = audioCtx.createOscillator(); osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(freq * 0.85, now); // L'urlo parte leggermente calante
-                osc.frequency.linearRampToValueAtTime(freq * 1.1, now + 0.4); // Sale all'apice dell'esultanza
-                osc.frequency.linearRampToValueAtTime(freq * 0.95, now + dur); // Scende esausto
-                
-                const oGain = audioCtx.createGain(); oGain.gain.setValueAtTime(0, now);
-                oGain.gain.linearRampToValueAtTime(0.045, now + 0.2); // Mixato basso nel rumore
-                oGain.gain.linearRampToValueAtTime(0, now + dur);
-                
-                const oFilter = audioCtx.createBiquadFilter(); oFilter.type = 'lowpass'; oFilter.frequency.value = 700;
-                
-                osc.connect(oFilter).connect(oGain).connect(masterGain);
-                osc.start(now); osc.stop(now + dur);
-            });
+        let timerInterval = null;
+        let timerDeadline = 0;
+        let audioCtx = null;
+        let activeTeamRename = null;
+
+        function saveStateToStorage() {
+            try { localStorage.setItem('subbuteo_state', JSON.stringify({ ...state, isRunning: false, wakeLock: null })); }
+            catch (e) {}
+        }
+        function loadStateFromStorage() {
+            try {
+                const s = localStorage.getItem('subbuteo_state');
+                if (s) { state = { ...state, ...JSON.parse(s), isRunning: false }; }
+            } catch (e) {}
         }
 
         function toggleMute() {
             state.isMuted = !state.isMuted;
+            updateMuteButton();
+            saveStateToStorage();
+        }
+
+        function updateMuteButton() {
             document.getElementById('muteIcon').textContent = state.isMuted ? '🔇' : '🔊';
-            document.getElementById('muteBtn').classList.toggle('opacity-50', state.isMuted);
-            saveState();
+            const button = document.getElementById('muteBtn');
+            button.setAttribute('aria-pressed', state.isMuted);
+            button.classList.toggle('bg-rose-900', state.isMuted);
+            button.classList.toggle('bg-zinc-800', !state.isMuted);
         }
 
-        // === STORAGE & UI ===
-        function saveState() { localStorage.setItem('subbuteoPWA', JSON.stringify(state)); }
-        function loadStateFromStorage() {
-            const d = localStorage.getItem('subbuteoPWA');
-            if (d) Object.assign(state, JSON.parse(d));
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        function pad(n) { return n < 10 ? '0'+n : n; }
-        function formatTime(secs) { return pad(Math.floor(secs/60)) + ':' + pad(secs%60); }
-        function logEvent(msg) {
-            const timeStr = formatTime(state.halfDuration - state.timeRemaining);
-            const pStr = state.period === 1 ? '1°T' : state.period === 2 ? '2°T' : state.period === 4 ? '1°TS' : '2°TS';
-            state.matchLog.unshift(`[${pStr} ${timeStr}] ${msg}`);
-            if (state.matchLog.length > 50) state.matchLog.pop();
-            saveState(); updateUI();
+        function triggerWhistleBlast(time, length) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(2950, time);
+            osc.frequency.linearRampToValueAtTime(2800, time + length);
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.4, time + 0.05);
+            gain.gain.linearRampToValueAtTime(0.4, time + length - 0.1);
+            gain.gain.linearRampToValueAtTime(0, time + length);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(time); osc.stop(time + length);
+        }
+
+        function playSingleWhistle() {
+            if (state.isMuted) return;
+            initAudioContext();
+            triggerWhistleBlast(audioCtx.currentTime, 0.45);
+        }
+
+        function playHalfTimeWhistle() {
+            if (state.isMuted) return;
+            initAudioContext();
+            triggerWhistleBlast(audioCtx.currentTime, 0.35);
+            triggerWhistleBlast(audioCtx.currentTime + 0.5, 0.6);
+        }
+
+        function playFullTimeWhistle() {
+            if (state.isMuted) return;
+            initAudioContext();
+            triggerWhistleBlast(audioCtx.currentTime, 0.35);
+            triggerWhistleBlast(audioCtx.currentTime + 0.5, 0.35);
+            triggerWhistleBlast(audioCtx.currentTime + 1.0, 1.2);
+        }
+
+        function playGoalRoar() {
+            if (state.isMuted || !state.goalSoundEnabled) return;
+            initAudioContext();
+            
+            const now = audioCtx.currentTime, dur = 3.6, sr = audioCtx.sampleRate, fc = sr * dur;
+            const pb = audioCtx.createBuffer(1, fc, sr), wb = audioCtx.createBuffer(1, fc, sr);
+            const pd = pb.getChannelData(0), wd = wb.getChannelData(0);
+            let b0=0, b1=0, b2=0, b3=0, b4=0, b5=0, b6=0;
+            for (let i=0; i<fc; i++) {
+                const w = Math.random()*2-1; wd[i] = w;
+                b0 = 0.99886*b0 + w*0.0555179; b1 = 0.99332*b1 + w*0.0750759;
+                b2 = 0.96900*b2 + w*0.1538520; b3 = 0.86650*b3 + w*0.3104856;
+                b4 = 0.55000*b4 + w*0.5329522; b5 = -0.7616*b5 - w*0.0168980;
+                pd[i] = (b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.08; b6 = w*0.115926;
+            }
+
+            const mg = audioCtx.createGain();
+            mg.gain.setValueAtTime(0.001, now);
+            mg.gain.exponentialRampToValueAtTime(0.85, now + 0.14);
+            mg.gain.linearRampToValueAtTime(0.68, now + 0.65);
+            mg.gain.linearRampToValueAtTime(0.88, now + 1.15);
+            mg.gain.linearRampToValueAtTime(0.62, now + 2.1);
+            mg.gain.exponentialRampToValueAtTime(0.001, now + dur);
+            mg.connect(audioCtx.destination);
+
+            const s1 = audioCtx.createBufferSource(), f1 = audioCtx.createBiquadFilter(), g1 = audioCtx.createGain();
+            s1.buffer = pb; f1.type = 'lowpass';
+            f1.frequency.setValueAtTime(340, now); f1.frequency.linearRampToValueAtTime(480, now+0.3); f1.frequency.linearRampToValueAtTime(290, now+dur);
+            g1.gain.value = 0.95; s1.connect(f1); f1.connect(g1); g1.connect(mg);
+
+            const s2 = audioCtx.createBufferSource(), f2 = audioCtx.createBiquadFilter(), g2 = audioCtx.createGain();
+            s2.buffer = pb; f2.type = 'bandpass';
+            f2.frequency.setValueAtTime(750, now); f2.frequency.exponentialRampToValueAtTime(1180, now+0.25); f2.frequency.linearRampToValueAtTime(680, now+dur); f2.Q.value = 1.1;
+            g2.gain.value = 0.75; s2.connect(f2); f2.connect(g2); g2.connect(mg);
+
+            const s3 = audioCtx.createBufferSource(), f3 = audioCtx.createBiquadFilter(), g3 = audioCtx.createGain();
+            s3.buffer = wb; f3.type = 'bandpass';
+            f3.frequency.setValueAtTime(2100, now); f3.frequency.linearRampToValueAtTime(2600, now+0.4); f3.frequency.linearRampToValueAtTime(1750, now+dur); f3.Q.value = 0.85;
+            g3.gain.value = 0.16; s3.connect(f3); f3.connect(g3); g3.connect(mg);
+
+            s1.start(now); s2.start(now); s3.start(now);
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try { state.wakeLock = await navigator.wakeLock.request('screen'); }
+                catch (e) {}
+            }
+        }
+        function releaseWakeLock() {
+            if (state.wakeLock) { state.wakeLock.release().then(() => state.wakeLock = null); }
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 0) seconds = 0;
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
         }
 
         function updateUI() {
@@ -552,211 +571,301 @@
             document.getElementById('awayNameDisplay').textContent = state.awayName;
             document.getElementById('homeScoreDisplay').textContent = state.homeScore;
             document.getElementById('awayScoreDisplay').textContent = state.awayScore;
-            
-            document.getElementById('homeBasePath').setAttribute('fill', state.homeColor);
-            document.getElementById('homeShirt').setAttribute('fill', state.homeColor);
-            document.getElementById('homeSleeves').setAttribute('fill', state.homeColor);
-            document.getElementById('homeInnerBase').setAttribute('fill', state.homeSecColor);
-
-            document.getElementById('awayBasePath').setAttribute('fill', state.awayColor);
-            document.getElementById('awayShirt').setAttribute('fill', state.awayColor);
-            document.getElementById('awaySleeves').setAttribute('fill', state.awayColor);
-            document.getElementById('awayInnerBase').setAttribute('fill', state.awaySecColor);
-
             document.getElementById('timerDisplay').textContent = formatTime(state.timeRemaining);
-            document.getElementById('halfDurationBadge').textContent = 'Tempo: ' + Math.floor(state.halfDuration/60) + 'm';
+            document.getElementById('halfDurationBadge').textContent = `Tempo: ${state.halfDurationMinutes}m`;
+
+            document.getElementById('homeBasePath').setAttribute('fill', state.homeColors.primary);
+            document.getElementById('homeShirt').setAttribute('fill', state.homeColors.primary);
+            document.getElementById('homeSleeves').setAttribute('fill', state.homeColors.primary);
+            document.getElementById('homeInnerBase').setAttribute('fill', state.homeColors.secondary);
             
+            document.getElementById('awayBasePath').setAttribute('fill', state.awayColors.primary);
+            document.getElementById('awayShirt').setAttribute('fill', state.awayColors.primary);
+            document.getElementById('awaySleeves').setAttribute('fill', state.awayColors.primary);
+            document.getElementById('awayInnerBase').setAttribute('fill', state.awayColors.secondary);
+
             let pText = state.period === 1 ? '1° TEMPO' : state.period === 2 ? '2° TEMPO' : state.period === 4 ? '1° SUPPL.' : state.period === 5 ? '2° SUPPL.' : 'FINITA';
             document.getElementById('periodBadge').textContent = pText;
 
             const btnText = document.getElementById('startPauseText');
             const btnIcon = document.getElementById('startPauseIcon');
             const btn = document.getElementById('startPauseBtn');
+            const baseBtnClass = "btn-tactile flex-1 py-2 sm:py-3 px-2 rounded-xl font-condensed font-bold text-sm sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-1.5 ";
+            const pb = document.getElementById('periodActionBanner');
+            const ft = document.getElementById('fullTimeExtras');
             
             if (state.period === 3 || state.period > 5) {
-                btnText.textContent = "PARTITA FINITA"; btnIcon.textContent = "⏹";
-                btn.className = "btn-tactile col-span-2 py-3 px-3 rounded-xl bg-zinc-700 border border-zinc-500 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-zinc-400 flex items-center justify-center gap-2 cursor-not-allowed";
-                document.getElementById('periodActionBanner').classList.remove('hidden');
+                btnText.textContent = "FINITA"; btnIcon.textContent = "⏹";
+                btn.className = baseBtnClass + "bg-zinc-700 border-zinc-500 text-zinc-400";
+                pb.classList.remove('hidden'); pb.classList.add('flex');
                 document.getElementById('periodActionText').textContent = 'Triplice fischio!';
                 document.getElementById('periodActionBtn').classList.add('hidden');
-                document.getElementById('fullTimeExtras').classList.remove('hidden');
+                ft.classList.remove('hidden'); ft.classList.add('grid');
+                document.getElementById('extraTimeBtn').classList.toggle('hidden', state.period !== 3);
+                document.getElementById('fullTimeShareBtn').classList.toggle('col-span-2', state.period !== 3);
             } else {
                 if (state.timeRemaining <= 0 && !state.isRunning) {
                     btnText.textContent = "FINE TEMPO"; btnIcon.textContent = "⏹";
-                    btn.className = "btn-tactile col-span-2 py-3 px-3 rounded-xl bg-amber-600 border border-amber-500 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2";
-                    document.getElementById('periodActionBanner').classList.remove('hidden');
+                    btn.className = baseBtnClass + "bg-amber-600 border-amber-500";
+                    pb.classList.remove('hidden'); pb.classList.add('flex');
                     document.getElementById('periodActionBtn').classList.remove('hidden');
-                    document.getElementById('fullTimeExtras').classList.add('hidden');
+                    ft.classList.remove('grid'); ft.classList.add('hidden');
                     let nextText = state.period === 1 ? "Inizia 2° Tempo" : state.period === 4 ? "Inizia 2° Supp" : "";
                     document.getElementById('periodActionText').textContent = `Fine ${pText}!`;
                     document.getElementById('periodActionBtn').textContent = nextText;
                 } else {
-                    document.getElementById('periodActionBanner').classList.add('hidden');
+                    pb.classList.remove('flex'); pb.classList.add('hidden');
                     if (state.isRunning) {
                         btnText.textContent = "PAUSA"; btnIcon.textContent = "⏸";
-                        btn.className = "btn-tactile col-span-2 py-3 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2";
+                        btn.className = baseBtnClass + "bg-rose-600 hover:bg-rose-500 border-rose-400";
                     } else {
-                        btnText.textContent = "AVVIA TEMPO"; btnIcon.textContent = "▶";
-                        btn.className = "btn-tactile col-span-2 py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2";
+                        btnText.textContent = "AVVIA"; btnIcon.textContent = "▶";
+                        btn.className = baseBtnClass + "bg-emerald-600 hover:bg-emerald-500 border-emerald-400";
                     }
                 }
             }
-
             document.getElementById('matchLog').textContent = state.matchLog.length > 0 ? state.matchLog[0] : "Calcio d'inizio pronto.";
-            document.getElementById('muteIcon').textContent = state.isMuted ? '🔇' : '🔊';
         }
 
-        // === TIMER ===
-        async function toggleTimer() {
-            if (state.period === 3 || state.period > 5 || (state.timeRemaining <= 0)) return;
+        function toggleTimer() {
+            if (state.period === 3 || state.period > 5) return;
+            if (state.timeRemaining <= 0) return;
+
             initAudioContext();
-            state.isRunning = !state.isRunning;
             if (state.isRunning) {
-                if ('wakeLock' in navigator && !state.wakeLock) {
-                    try { state.wakeLock = await navigator.wakeLock.request('screen'); document.getElementById('wakeLockStatus').textContent = '🔒 Schermo attivo'; } catch(e){}
-                }
-                if (!timerInterval) timerInterval = setInterval(timerTick, 1000);
+                syncTimer();
+                if (!state.isRunning) return;
+                clearInterval(timerInterval);
+                state.isRunning = false;
+                releaseWakeLock();
+                logEvent("⏱️ Tempo in pausa.");
             } else {
-                if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-                if (state.wakeLock) { state.wakeLock.release().then(()=>{state.wakeLock=null; document.getElementById('wakeLockStatus').textContent='Tabellone pronto';}); }
+                if (state.timeRemaining === state.halfDurationMinutes * 60) {
+                    playSingleWhistle();
+                    logEvent(`▶️ Inizio ${document.getElementById('periodBadge').textContent}`);
+                }
+                state.isRunning = true;
+                timerDeadline = Date.now() + state.timeRemaining * 1000;
+                requestWakeLock();
+                timerInterval = setInterval(syncTimer, 200);
             }
-            saveState(); updateUI();
+            updateUI();
+            saveStateToStorage();
         }
 
-        function timerTick() {
+        function syncTimer() {
             if (!state.isRunning) return;
-            state.timeRemaining--;
-            if (state.timeRemaining <= 0) {
-                state.timeRemaining = 0;
+            const remaining = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
+            if (remaining === state.timeRemaining && remaining > 0) return;
+            state.timeRemaining = remaining;
+            if (remaining === 0) {
+                clearInterval(timerInterval);
                 state.isRunning = false;
-                if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+                releaseWakeLock();
                 if (state.period === 1 || state.period === 4) {
-                    playPeriodEndWhistle(false); logEvent('Fine ' + (state.period===1?'1° Tempo':'1° Tempo Suppl.'));
+                    playHalfTimeWhistle();
+                    logEvent(`⏸ Fine ${state.period === 1 ? '1° Tempo' : '1° Supplementare'}`);
                 } else {
-                    playPeriodEndWhistle(true); logEvent('Fine Partita');
+                    playFullTimeWhistle();
+                    logEvent(`⏹ Fine Partita (${state.homeScore} - ${state.awayScore})`);
                     state.period = state.period === 2 ? 3 : 6;
                 }
-                if (state.wakeLock) state.wakeLock.release().then(()=>{state.wakeLock=null;});
             }
-            saveState(); updateUI();
+            updateUI();
+            saveStateToStorage();
         }
 
-        function adjustTime(secs) {
+        function adjustTime(seconds) {
+            if (state.isRunning) {
+                syncTimer();
+                if (!state.isRunning) return;
+                const now = Date.now();
+                timerDeadline = Math.min(now + 99 * 60 * 1000, timerDeadline + seconds * 1000);
+                syncTimer();
+                return;
+            }
             if (state.period === 3 || state.period > 5) return;
-            state.timeRemaining = Math.max(0, Math.min(state.halfDuration, state.timeRemaining + secs));
-            saveState(); updateUI();
+            state.timeRemaining += seconds;
+            if (state.timeRemaining < 0) state.timeRemaining = 0;
+            if (state.timeRemaining > 99 * 60) state.timeRemaining = 99 * 60;
+            updateUI();
+            saveStateToStorage();
         }
 
-        function startNextPeriod(isExtra = false) {
-            if (isExtra) {
-                state.period = 4;
-                state.halfDuration = Math.max(60, Math.floor(state.halfDuration / 3)); 
+        function startSecondHalf() {
+            if (state.isRunning || state.timeRemaining !== 0 || ![1, 4].includes(state.period)) return;
+            state.period = state.period === 1 ? 2 : 5;
+            state.timeRemaining = state.halfDurationMinutes * 60;
+            updateUI();
+            saveStateToStorage();
+        }
+
+        function startExtraTime() {
+            if (state.period !== 3) return;
+            state.period = 4;
+            state.timeRemaining = state.halfDurationMinutes * 60;
+            updateUI();
+            saveStateToStorage();
+        }
+
+        function updateScore(team, diff) {
+            if (diff > 0) {
+                if (team === 'home') { state.homeScore++; playGoalRoar(); animateScoreCard('home'); logEvent(`⚽ GOL! ${state.homeName}`); }
+                else { state.awayScore++; playGoalRoar(); animateScoreCard('away'); logEvent(`⚽ GOL! ${state.awayName}`); }
             } else {
-                state.period = state.period === 1 ? 2 : 5;
+                if (team === 'home' && state.homeScore > 0) { state.homeScore--; logEvent(`❌ Gol annullato - ${state.homeName}`); }
+                else if (team === 'away' && state.awayScore > 0) { state.awayScore--; logEvent(`❌ Gol annullato - ${state.awayName}`); }
             }
-            state.timeRemaining = state.halfDuration;
-            saveState(); updateUI();
+            updateUI();
+            saveStateToStorage();
         }
 
-        // === SCORING ===
-        function updateScore(team, change) {
-            if (change > 0) {
-                playGoalRoar();
-                const card = document.getElementById(team + 'ScoreCard');
-                card.classList.remove('score-flip', 'goal-celebration');
-                void card.offsetWidth; 
-                card.classList.add('score-flip', 'goal-celebration');
-                logEvent(`GOL! Segna ${state[team+'Name']}!`);
-            } else if (change < 0 && state[team+'Score'] > 0) {
-                logEvent(`❌ Gol annullato - ${state[team+'Name']}`);
-            }
-            state[team+'Score'] = Math.max(0, state[team+'Score'] + change);
-            saveState(); updateUI();
+        function animateScoreCard(team) {
+            const el = document.getElementById(`${team}ScoreCard`);
+            el.classList.remove('score-flip', 'goal-celebration');
+            void el.offsetWidth;
+            el.classList.add('score-flip', 'goal-celebration');
         }
 
-        // === MODALS & RENAME ===
+        function logEvent(msg) {
+            const timeStr = formatTime(state.halfDurationMinutes * 60 - state.timeRemaining);
+            const p = state.period === 1 ? '1T' : state.period === 2 ? '2T' : state.period === 4 ? '1S' : state.period === 5 ? '2S' : '';
+            state.matchLog.unshift(`[${p} ${timeStr}] ${msg}`);
+            if (state.matchLog.length > 50) state.matchLog.pop();
+        }
+
+        function shareMatchResult() {
+            let logText = state.matchLog.slice().reverse().map(l => l).join('\n');
+            const text = `🏆 Risultato Subbuteo:\n${state.homeName} ${state.homeScore} - ${state.awayScore} ${state.awayName}\n\n${logText}`;
+            if (navigator.share) { navigator.share({ title: 'Risultato Subbuteo', text: text }).catch(()=>{}); }
+            else {
+                navigator.clipboard.writeText(text).then(() => {
+                    const toast = document.getElementById('toastNotice');
+                    toast.classList.remove('hidden');
+                    setTimeout(() => toast.classList.add('hidden'), 3000);
+                });
+            }
+        }
+
+        function populateColorPresets(containerId, inputP, inputS) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            classicColors.forEach(c => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.title = c.name;
+                btn.className = "w-6 h-6 rounded-full border border-zinc-500 hover:scale-110 transition-transform overflow-hidden relative shadow-sm";
+                btn.innerHTML = `<div class="absolute inset-0 top-0 h-1/2" style="background-color: ${c.p}"></div><div class="absolute inset-0 top-1/2 h-1/2" style="background-color: ${c.s}"></div>`;
+                btn.onclick = () => { document.getElementById(inputP).value = c.p; document.getElementById(inputS).value = c.s; };
+                container.appendChild(btn);
+            });
+        }
+
         function openSettingsModal() {
             document.getElementById('homeNameInput').value = state.homeName;
             document.getElementById('awayNameInput').value = state.awayName;
-            document.getElementById('halfMinutesInput').value = Math.floor(state.halfDuration / 60);
-            document.getElementById('homePrimaryColor').value = state.homeColor;
-            document.getElementById('homeSecondaryColor').value = state.homeSecColor;
-            document.getElementById('awayPrimaryColor').value = state.awayColor;
-            document.getElementById('awaySecondaryColor').value = state.awaySecColor;
+            document.getElementById('homePrimaryColor').value = state.homeColors.primary;
+            document.getElementById('homeSecondaryColor').value = state.homeColors.secondary;
+            document.getElementById('awayPrimaryColor').value = state.awayColors.primary;
+            document.getElementById('awaySecondaryColor').value = state.awayColors.secondary;
+            document.getElementById('halfMinutesInput').value = state.halfDurationMinutes;
             document.getElementById('goalSoundCheckbox').checked = state.goalSoundEnabled;
-            document.getElementById('settingsModal').classList.remove('hidden');
-            document.getElementById('settingsModal').classList.add('flex');
-        }
-        function closeSettingsModal() { document.getElementById('settingsModal').classList.add('hidden'); document.getElementById('settingsModal').classList.remove('flex'); }
-        
-        function saveSettings() {
-            state.homeName = document.getElementById('homeNameInput').value || 'CASA';
-            state.awayName = document.getElementById('awayNameInput').value || 'OSPITI';
-            state.halfDuration = Math.max(1, parseInt(document.getElementById('halfMinutesInput').value) || 10) * 60;
-            state.homeColor = document.getElementById('homePrimaryColor').value;
-            state.homeSecColor = document.getElementById('homeSecondaryColor').value;
-            state.awayColor = document.getElementById('awayPrimaryColor').value;
-            state.awaySecColor = document.getElementById('awaySecondaryColor').value;
-            state.goalSoundEnabled = document.getElementById('goalSoundCheckbox').checked;
-            
-            if (state.period === 1 && state.timeRemaining === state.halfDuration) {} 
-            else if (!state.isRunning && state.timeRemaining > state.halfDuration) state.timeRemaining = state.halfDuration;
-            
-            saveState(); updateUI(); closeSettingsModal();
+            populateColorPresets('homeColorPresets', 'homePrimaryColor', 'homeSecondaryColor');
+            populateColorPresets('awayColorPresets', 'awayPrimaryColor', 'awaySecondaryColor');
+            document.getElementById('settingsModal').showModal();
         }
 
+        function closeSettingsModal() { document.getElementById('settingsModal').close(); }
         function setPresetMinutes(m) { document.getElementById('halfMinutesInput').value = m; }
 
-        function quickRenameTeam(t) {
-            teamToRename = t;
-            document.getElementById('quickRenameInput').value = state[t+'Name'];
-            document.getElementById('renameModalTitle').textContent = `Rinomina ${t==='home'?'Casa':'Ospiti'}`;
-            document.getElementById('renameModal').classList.remove('hidden'); document.getElementById('renameModal').classList.add('flex');
-            document.getElementById('quickRenameInput').focus();
+        function saveSettings() {
+            const durationInput = document.getElementById('halfMinutesInput');
+            if (!durationInput.reportValidity()) return;
+            const newMins = durationInput.valueAsNumber;
+            state.homeName = document.getElementById('homeNameInput').value.trim() || "CASA";
+            state.awayName = document.getElementById('awayNameInput').value.trim() || "OSPITI";
+            state.homeColors.primary = document.getElementById('homePrimaryColor').value;
+            state.homeColors.secondary = document.getElementById('homeSecondaryColor').value;
+            state.awayColors.primary = document.getElementById('awayPrimaryColor').value;
+            state.awayColors.secondary = document.getElementById('awaySecondaryColor').value;
+            
+            if (newMins !== state.halfDurationMinutes && !state.isRunning && state.timeRemaining === state.halfDurationMinutes * 60) {
+                state.halfDurationMinutes = newMins;
+                state.timeRemaining = newMins * 60;
+            } else { state.halfDurationMinutes = newMins; }
+
+            state.goalSoundEnabled = document.getElementById('goalSoundCheckbox').checked;
+            
+            closeSettingsModal();
+            updateUI();
+            saveStateToStorage();
         }
-        function closeRenameModal() { document.getElementById('renameModal').classList.add('hidden'); document.getElementById('renameModal').classList.remove('flex'); }
+
+        function quickRenameTeam(team) {
+            activeTeamRename = team;
+            document.getElementById('renameModalTitle').textContent = `Rinomina ${team === 'home' ? 'Casa' : 'Ospiti'}`;
+            document.getElementById('quickRenameInput').value = team === 'home' ? state.homeName : state.awayName;
+            document.getElementById('renameModal').showModal();
+        }
+        function closeRenameModal() { document.getElementById('renameModal').close(); }
         function confirmQuickRename() {
-            if (teamToRename) {
-                state[teamToRename+'Name'] = document.getElementById('quickRenameInput').value || (teamToRename==='home'?'CASA':'OSPITI');
-                saveState(); updateUI();
+            const val = document.getElementById('quickRenameInput').value.trim();
+            if (val) {
+                if (activeTeamRename === 'home') state.homeName = val;
+                else state.awayName = val;
+                updateUI();
+                saveStateToStorage();
             }
             closeRenameModal();
         }
 
         function openLogModal() {
-            const list = document.getElementById('fullLogList');
-            list.innerHTML = state.matchLog.map(l => {
-                let colorClass = "text-zinc-200";
-                if (l.includes("GOL!")) colorClass = "text-emerald-400 font-bold";
-                else if (l.includes("annullato")) colorClass = "text-rose-400";
-                return `<li class="border-b border-zinc-800 pb-1.5 mb-1.5 ${colorClass}">${l}</li>`;
-            }).join('');
-            document.getElementById('logModal').classList.remove('hidden'); document.getElementById('logModal').classList.add('flex');
+            const ul = document.getElementById('fullLogList');
+            ul.innerHTML = '';
+            state.matchLog.forEach(log => {
+                const li = document.createElement('li');
+                li.className = "py-1 border-b border-zinc-800 last:border-0";
+                if (log.includes('GOL!')) { li.classList.add('text-emerald-400', 'font-semibold'); }
+                else if (log.includes('annullato')) { li.classList.add('text-rose-500'); }
+                li.textContent = log;
+                ul.appendChild(li);
+            });
+            if (state.matchLog.length === 0) ul.innerHTML = '<li class="text-zinc-500 italic text-center py-4">Nessun evento registrato.</li>';
+            document.getElementById('logModal').showModal();
         }
-        function closeLogModal() { document.getElementById('logModal').classList.add('hidden'); document.getElementById('logModal').classList.remove('flex'); }
+        function closeLogModal() { document.getElementById('logModal').close(); }
 
-        function openResetModal() { document.getElementById('resetModal').classList.remove('hidden'); document.getElementById('resetModal').classList.add('flex'); }
-        function closeResetModal() { document.getElementById('resetModal').classList.add('hidden'); document.getElementById('resetModal').classList.remove('flex'); }
+        function openResetModal() { document.getElementById('resetModal').showModal(); }
+        function closeResetModal() { document.getElementById('resetModal').close(); }
         function confirmResetMatch() {
-            state.homeScore = 0; state.awayScore = 0; state.period = 1; state.timeRemaining = state.halfDuration; state.matchLog = []; state.isRunning = false;
-            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-            saveState(); updateUI(); closeResetModal();
+            if (state.isRunning) { clearInterval(timerInterval); state.isRunning = false; releaseWakeLock(); }
+            state.homeScore = 0; state.awayScore = 0;
+            state.period = 1; state.timeRemaining = state.halfDurationMinutes * 60;
+            state.matchLog = [];
+            closeResetModal();
+            updateUI();
+            saveStateToStorage();
         }
 
-        function shareMatchResult() {
-            const logText = state.matchLog.length > 0 ? "\n\nCronaca Eventi:\n" + [...state.matchLog].reverse().join('\n') : "";
-            const text = `⚽ Subbuteo Match\n${state.homeName} ${state.homeScore} - ${state.awayScore} ${state.awayName}${logText}\n\nRisultato salvato dal Tabellone Live!`;
-            if (navigator.share) { navigator.share({ title: 'Risultato Partita', text: text }).catch(()=>{}); }
-            else { 
-                navigator.clipboard.writeText(text);
-                const toast = document.getElementById('toastNotice');
-                toast.textContent = 'Risultato copiato negli appunti!';
-                toast.classList.remove('hidden');
-                setTimeout(() => toast.classList.add('hidden'), 3000);
-            }
-        }
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) syncTimer();
+        });
 
-        window.onload = function() { setupPWA(); loadStateFromStorage(); updateUI(); };
+        document.querySelectorAll('dialog').forEach(dialog => {
+            dialog.addEventListener('keydown', event => {
+                if (event.key === 'Escape' && !event.defaultPrevented) {
+                    event.preventDefault();
+                    dialog.close();
+                }
+            });
+        });
+
+        window.onload = function() {
+            setupPWA();
+            loadStateFromStorage();
+            updateUI();
+            updateMuteButton();
+        };
     </script>
 </body>
 </html>
