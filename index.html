@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Meta tag specifici PWA & iOS Safari Full-Screen -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Subbuteo Match">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0f4d25">
+    <meta name="description" content="Tabellone segnapunti, cronometro e fischietto arbitro in stile Subbuteo.">
+
+    <title>Subbuteo Match - Tabellone & Cronometro PWA</title>
+
+    <!-- Icone & Manifest generati dinamicamente via JavaScript -->
+    <link id="appleTouchIcon" rel="apple-touch-icon" sizes="180x180" href="">
+    <link id="faviconIcon" rel="icon" type="image/png" href="">
+    <link id="pwaManifest" rel="manifest" href="">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pitch-green: #0f4d25;
+            --pitch-dark: #093017;
+            --board-black: #18181b;
+            --board-frame: #f8fafc;
+            --accent-gold: #eab308;
+        }
+
+        html, body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--pitch-green);
+            /* Effetto panno verde Subbuteo con texture fine */
+            background-image: 
+                radial-gradient(circle at 50% 35%, rgba(34, 139, 74, 0.52) 0%, rgba(9, 48, 23, 0.96) 100%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 2px, transparent 2px, transparent 4px);
+            color: #ffffff;
+            min-height: 100dvh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
+        /* Supporto Safe Area per iPhone (Notch, Dynamic Island e Barra Home) */
+        body {
+            padding-top: max(12px, env(safe-area-inset-top));
+            padding-bottom: max(14px, env(safe-area-inset-bottom));
+            padding-left: max(12px, env(safe-area-inset-left));
+            padding-right: max(12px, env(safe-area-inset-right));
+        }
+
+        .font-scoreboard {
+            font-family: 'Bebas Neue', 'Oswald', sans-serif;
+            letter-spacing: 0.04em;
+        }
+
+        .font-condensed {
+            font-family: 'Oswald', sans-serif;
+        }
+
+        /* Linee bianche del campo sullo sfondo */
+        .pitch-lines {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.17;
+        }
+
+        /* Frontone classico a gradoni stile tabellone Subbuteo C114 */
+        .subbuteo-pediment {
+            position: relative;
+            background: var(--board-black);
+            border: 3px solid var(--board-frame);
+            border-bottom: none;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .subbuteo-pediment::before {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56%;
+            height: 12px;
+            background: var(--board-black);
+            border: 3px solid var(--board-frame);
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+        }
+
+        /* Corpo principale del tabellone */
+        .subbuteo-board {
+            background: linear-gradient(180deg, #1f1f23 0%, #121215 100%);
+            border: 3px solid var(--board-frame);
+            border-radius: 14px;
+            box-shadow: 
+                0 20px 35px -10px rgba(0, 0, 0, 0.78),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        /* Tessera segnapunti stile cartoncino scorrevole/ribaltabile */
+        .score-card {
+            background: linear-gradient(180deg, #09090b 0%, #18181b 49%, #09090b 51%, #141417 100%);
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 
+                inset 0 4px 10px rgba(0, 0, 0, 0.9),
+                0 4px 8px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+            perspective: 600px;
+            transform-style: preserve-3d;
+        }
+
+        .score-card::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.15);
+            pointer-events: none;
+        }
+
+        .score-flip {
+            animation: cardFlip 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        @keyframes cardFlip {
+            0% { transform: rotateX(0deg) scale(1); }
+            35% { transform: rotateX(-55deg) scale(1.07); border-color: #eab308; }
+            70% { transform: rotateX(15deg) scale(1.03); border-color: #eab308; }
+            100% { transform: rotateX(0deg) scale(1); }
+        }
+
+        /* Effetto flash rete/gol */
+        @keyframes goalFlash {
+            0%, 100% { box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.78); }
+            50% { box-shadow: 0 0 38px 10px rgba(234, 179, 8, 0.85); }
+        }
+
+        .goal-celebration {
+            animation: goalFlash 0.55s ease-in-out 2;
+        }
+
+        /* Pulsanti tattili 3D stile retro */
+        .btn-tactile {
+            transition: transform 0.08s ease, box-shadow 0.08s ease;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.68);
+        }
+
+        .btn-tactile:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.68);
+        }
+
+        /* Custom scrollbar sottile */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.25);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between">
+
+    <!-- Linee decorative del campo Subbuteo -->
+    <svg class="pitch-lines" viewBox="0 0 400 800" preserveAspectRatio="none">
+        <rect x="16" y="16" width="368" height="768" fill="none" stroke="white" stroke-width="3"/>
+        <line x1="16" y1="400" x2="384" y2="400" stroke="white" stroke-width="3"/>
+        <circle cx="200" cy="400" r="65" fill="none" stroke="white" stroke-width="3"/>
+        <circle cx="200" cy="400" r="4" fill="white"/>
+        <rect x="95" y="16" width="210" height="95" fill="none" stroke="white" stroke-width="3"/>
+        <rect x="95" y="689" width="210" height="95" fill="none" stroke="white" stroke-width="3"/>
+    </svg>
+
+    <!-- Banner Discreto Installazione PWA per iPhone Safari (visibile solo se non in standalone) -->
+    <div id="iosInstallBanner" class="hidden relative z-30 w-full max-w-md mb-2.5 bg-zinc-900/95 backdrop-blur-md border border-amber-400/60 rounded-xl p-2.5 shadow-lg">
+        <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <img id="bannerAppIcon" src="" alt="Icona App" class="w-9 h-9 rounded-lg border border-white/25 shrink-0">
+                <div class="text-xs leading-snug text-zinc-200">
+                    <span class="font-bold text-amber-400 block">Installa come App su iPhone</span>
+                    Tocca <span class="inline-flex items-center px-1.5 py-0.2 bg-zinc-800 border border-zinc-600 rounded font-bold text-sky-400">Condividi ⍐</span> → <span class="font-semibold text-white">Aggiungi alla schermata Home</span>
+                </div>
+            </div>
+            <button onclick="dismissInstallBanner()" aria-label="Chiudi suggerimento"
+                class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white text-xs font-bold shrink-0">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <!-- Barra superiore rapida: Stato Offline/PWA, Audio, Impostazioni -->
+    <header class="relative z-10 w-full max-w-md flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 border border-white/25 text-sm shadow">
+                ⚽
+            </span>
+            <div>
+                <div class="flex items-center gap-1.5">
+                    <h1 class="font-condensed font-bold text-sm sm:text-base tracking-wider uppercase text-white leading-none">
+                        Subbuteo Match
+                    </h1>
+                    <span id="offlineBadge" class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                        OFFLINE OK
+                    </span>
+                </div>
+                <p id="wakeLockStatus" class="text-[10px] text-emerald-300/80 font-medium mt-0.5">
+                    Pronto al calcio d'inizio
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Pulsante Muto / Audio -->
+            <button id="muteBtn" onclick="toggleMute()" title="Attiva/Disattiva Audio"
+                class="btn-tactile flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-600 text-white hover:bg-zinc-700">
+                <span id="muteIcon" class="text-lg">🔊</span>
+            </button>
+
+            <!-- Pulsante Impostazioni Partita -->
+            <button onclick="openSettingsModal()" title="Impostazioni Squadre e Tempo"
+                class="btn-tactile flex items-center gap-1.5 px-3 h-10 rounded-xl bg-amber-500 border border-amber-300 text-zinc-950 font-bold text-xs uppercase tracking-wide hover:bg-amber-400">
+                <span>⚙️</span>
+                <span>Imposta</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTENITORE PRINCIPALE TABELLONE STILE SUBBUTEO -->
+    <main class="relative z-10 w-full max-w-md flex-1 flex flex-col justify-center my-1">
+        
+        <!-- Frontone superiore architettonico stile C114 -->
+        <div class="mx-auto w-3/4 subbuteo-pediment py-1.5 px-3 text-center mt-2">
+            <span class="font-condensed font-bold text-xs sm:text-sm tracking-[0.22em] text-amber-400 uppercase">
+                ★ SUBBUTEO STADIUM ★
+            </span>
+        </div>
+
+        <!-- Corpo Tabellone -->
+        <section id="mainScoreboard" class="subbuteo-board p-3.5 sm:p-5">
+            
+            <!-- Sezione Tempo e Periodo di Gioco -->
+            <div class="bg-zinc-950/90 border-2 border-zinc-700 rounded-xl p-3 mb-3.5 text-center relative shadow-inner">
+                <div class="flex items-center justify-between mb-1">
+                    <span id="halfDurationBadge" class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+                        Tempo: 10:00
+                    </span>
+                    
+                    <!-- Indicatore Periodo -->
+                    <span id="periodBadge" class="font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-emerald-600 text-white shadow">
+                        1° TEMPO
+                    </span>
+
+                    <button onclick="openSettingsModal()" class="text-[11px] text-amber-400 hover:underline font-semibold">
+                        Modifica
+                    </button>
+                </div>
+
+                <!-- Display Cronometro Grande -->
+                <div id="timerDisplay" class="font-scoreboard text-6xl sm:text-7xl text-amber-400 leading-none my-1 drop-shadow-[0_2px_8px_rgba(234,179,8,0.3)]">
+                    10:00
+                </div>
+
+                <!-- Controlli Rapidi Cronometro -->
+                <div class="grid grid-cols-3 gap-2 mt-2.5">
+                    <button id="startPauseBtn" onclick="toggleTimer()"
+                        class="btn-tactile col-span-2 py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2">
+                        <span id="startPauseIcon">▶</span>
+                        <span id="startPauseText">AVVIA TEMPO</span>
+                    </button>
+
+                    <button onclick="playSingleWhistle()" id="whistleActionBtn"
+                        class="btn-tactile py-3 px-2 rounded-xl bg-amber-500 hover:bg-amber-400 border border-amber-300 font-condensed font-bold text-sm sm:text-base tracking-wide uppercase text-zinc-950 flex items-center justify-center gap-1"
+                        title="Suona il fischietto dell'arbitro">
+                        <span>📣</span>
+                        <span>FISCHIO</span>
+                    </button>
+                </div>
+
+                <!-- Regolazione fine secondi/minuti (utile in partita) -->
+                <div class="flex items-center justify-center gap-2 sm:gap-3 mt-2.5 pt-2 border-t border-zinc-800/90 text-xs">
+                    <span class="text-zinc-400 font-medium hidden sm:inline">Regola:</span>
+                    <button onclick="adjustTime(-60)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">-1m</button>
+                    <button onclick="adjustTime(-10)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">-10s</button>
+                    <button onclick="adjustTime(10)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">+10s</button>
+                    <button onclick="adjustTime(60)" class="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-mono border border-zinc-700">+1m</button>
+                </div>
+            </div>
+
+            <!-- Sezione Squadre e Punteggio (2 Colonne) -->
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 items-stretch">
+                
+                <!-- SQUADRA CASA -->
+                <div class="flex flex-col items-center bg-zinc-900/80 border border-zinc-700/80 rounded-xl p-2.5 sm:p-3">
+                    <!-- Miniatura Base Subbuteo SVG -->
+                    <div onclick="openSettingsModal()" class="cursor-pointer mb-1.5 group" title="Tocca per cambiare colori o nome">
+                        <svg id="homeFigureSvg" class="w-14 h-12 drop-shadow-md transition-transform group-hover:scale-105" viewBox="0 0 80 68">
+                            <ellipse cx="40" cy="60" rx="28" ry="6" fill="rgba(0,0,0,0.5)"/>
+                            <path d="M12 46 C12 58, 68 58, 68 46 L62 38 L18 38 Z" fill="#dc2626" stroke="#ffffff" stroke-width="1.5"/>
+                            <ellipse cx="40" cy="39" rx="22" ry="6" fill="#ffffff"/>
+                            <rect x="33" y="24" width="14" height="14" rx="2" fill="#dc2626"/>
+                            <rect x="34" y="16" width="12" height="10" rx="3" fill="#dc2626"/>
+                            <circle cx="40" cy="10" r="5" fill="#fde047"/>
+                        </svg>
+                    </div>
+
+                    <!-- Nome Squadra Casa (cliccabile per modifica rapida) -->
+                    <button onclick="quickRenameTeam('home')" id="homeNameDisplay"
+                        class="w-full font-condensed font-bold text-lg sm:text-xl uppercase tracking-wider text-white bg-zinc-950 border border-zinc-600 rounded-lg py-1 px-2 mb-2.5 truncate hover:border-amber-400 transition-colors"
+                        title="Tocca per rinominare">
+                        CASA
+                    </button>
+
+                    <!-- Tessera Punteggio Casa -->
+                    <div id="homeScoreCard" class="score-card w-full py-2 sm:py-3 flex items-center justify-center mb-3">
+                        <span id="homeScoreDisplay" class="font-scoreboard text-7xl sm:text-8xl text-white leading-none">
+                            0
+                        </span>
+                    </div>
+
+                    <!-- Pulsanti + / - Gol Casa -->
+                    <div class="grid grid-cols-3 gap-1.5 w-full">
+                        <button onclick="updateScore('home', -1)"
+                            class="btn-tactile col-span-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-xl text-zinc-300">
+                            −
+                        </button>
+                        <button onclick="updateScore('home', 1)"
+                            class="btn-tactile col-span-2 py-3 rounded-xl bg-red-600 hover:bg-red-500 border border-red-400 font-condensed font-bold text-xl tracking-wider text-white">
+                            + GOL
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SQUADRA OSPITI -->
+                <div class="flex flex-col items-center bg-zinc-900/80 border border-zinc-700/80 rounded-xl p-2.5 sm:p-3">
+                    <!-- Miniatura Base Subbuteo SVG -->
+                    <div onclick="openSettingsModal()" class="cursor-pointer mb-1.5 group" title="Tocca per cambiare colori o nome">
+                        <svg id="awayFigureSvg" class="w-14 h-12 drop-shadow-md transition-transform group-hover:scale-105" viewBox="0 0 80 68">
+                            <ellipse cx="40" cy="60" rx="28" ry="6" fill="rgba(0,0,0,0.5)"/>
+                            <path d="M12 46 C12 58, 68 58, 68 46 L62 38 L18 38 Z" fill="#2563eb" stroke="#ffffff" stroke-width="1.5"/>
+                            <ellipse cx="40" cy="39" rx="22" ry="6" fill="#ffffff"/>
+                            <rect x="33" y="24" width="14" height="14" rx="2" fill="#2563eb"/>
+                            <rect x="34" y="16" width="12" height="10" rx="3" fill="#2563eb"/>
+                            <circle cx="40" cy="10" r="5" fill="#fde047"/>
+                        </svg>
+                    </div>
+
+                    <!-- Nome Squadra Ospiti -->
+                    <button onclick="quickRenameTeam('away')" id="awayNameDisplay"
+                        class="w-full font-condensed font-bold text-lg sm:text-xl uppercase tracking-wider text-white bg-zinc-950 border border-zinc-600 rounded-lg py-1 px-2 mb-2.5 truncate hover:border-amber-400 transition-colors"
+                        title="Tocca per rinominare">
+                        OSPITI
+                    </button>
+
+                    <!-- Tessera Punteggio Ospiti -->
+                    <div id="awayScoreCard" class="score-card w-full py-2 sm:py-3 flex items-center justify-center mb-3">
+                        <span id="awayScoreDisplay" class="font-scoreboard text-7xl sm:text-8xl text-white leading-none">
+                            0
+                        </span>
+                    </div>
+
+                    <!-- Pulsanti + / - Gol Ospiti -->
+                    <div class="grid grid-cols-3 gap-1.5 w-full">
+                        <button onclick="updateScore('away', -1)"
+                            class="btn-tactile col-span-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 font-bold text-xl text-zinc-300">
+                            −
+                        </button>
+                        <button onclick="updateScore('away', 1)"
+                            class="btn-tactile col-span-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 border border-blue-400 font-condensed font-bold text-xl tracking-wider text-white">
+                            + GOL
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Banner Azione Rapida Intervallo / Fine Partita / Supplementari -->
+            <div id="periodActionBanner" class="hidden mt-3 p-2.5 rounded-xl bg-amber-500/20 border border-amber-400/60 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2">
+                    <span id="periodActionText" class="text-xs sm:text-sm font-semibold text-amber-200">
+                        Fine 1° Tempo! Pronto per la ripresa?
+                    </span>
+                    <button id="periodActionBtn" onclick="startSecondHalf()"
+                        class="btn-tactile shrink-0 px-3 py-1.5 rounded-lg bg-amber-400 text-zinc-950 font-condensed font-bold text-sm uppercase tracking-wide">
+                        Inizia 2° Tempo
+                    </button>
+                </div>
+                <!-- Opzioni extra a fine partita: Supplementari e Condividi Risultato -->
+                <div id="fullTimeExtras" class="hidden grid grid-cols-2 gap-2 pt-1.5 border-t border-amber-400/30">
+                    <button onclick="startExtraTime()" class="btn-tactile py-1.5 px-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-500 font-condensed font-bold text-xs uppercase tracking-wider text-white">
+                        ⏱️ Supplementari
+                    </button>
+                    <button onclick="shareMatchResult()" class="btn-tactile py-1.5 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-xs uppercase tracking-wider text-white">
+                        📤 Condividi Risultato
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Cronaca Match, Condivisione & Reset -->
+    <footer class="relative z-10 w-full max-w-md mt-2">
+        <div class="bg-zinc-950/80 backdrop-blur-sm border border-white/15 rounded-xl p-2.5 flex items-center justify-between gap-2">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5 text-[11px] text-zinc-400 uppercase font-bold tracking-wider mb-0.5">
+                    <span>📋 Cronaca Partita</span>
+                </div>
+                <div id="matchLog" class="text-xs text-zinc-200 truncate font-medium">
+                    Calcio d'inizio pronto. Premi AVVIA TEMPO!
+                </div>
+            </div>
+
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button onclick="shareMatchResult()" title="Condividi risultato"
+                    class="px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-xs font-semibold text-zinc-200">
+                    📤
+                </button>
+                <button onclick="openLogModal()" class="px-2.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-xs font-semibold text-zinc-200">
+                    Storico
+                </button>
+                <button onclick="openResetModal()" class="px-2.5 py-2 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-700/70 text-xs font-semibold text-rose-200">
+                    Reset
+                </button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notifica Copiato / Stato -->
+    <div id="toastNotice" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 border border-emerald-400 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-2xl">
+        Risultato copiato negli appunti!
+    </div>
+
+    <!-- MODALE IMPOSTAZIONI PARTITA (Nomi, Colori Classici Subbuteo, Durata) -->
+    <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border-2 border-zinc-600 rounded-2xl w-full max-w-md p-5 shadow-2xl max-h-[90dvh] overflow-y-auto custom-scroll">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+                <h2 class="font-condensed font-bold text-xl uppercase tracking-wider text-amber-400">
+                    ⚙️ Impostazioni Partita
+                </h2>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white font-bold">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Durata Partita -->
+                <div class="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
+                    <label class="block font-condensed font-bold text-sm uppercase tracking-wider text-zinc-300 mb-2">
+                        ⏱️ Durata di ciascun tempo (Minuti)
+                    </label>
+                    <div class="grid grid-cols-4 gap-2 mb-2.5">
+                        <button type="button" onclick="setPresetMinutes(5)" class="py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-bold text-sm">5 min</button>
+                        <button type="button" onclick="setPresetMinutes(10)" class="py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-bold text-sm">10 min</button>
+                        <button type="button" onclick="setPresetMinutes(15)" class="py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-bold text-sm">15 min</button>
+                        <button type="button" onclick="setPresetMinutes(20)" class="py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-bold text-sm">20 min</button>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-zinc-400">Personalizzata (minuti per tempo):</span>
+                        <input id="halfMinutesInput" type="number" min="1" max="90" value="10"
+                            class="w-20 bg-zinc-800 border border-zinc-600 rounded-lg px-2.5 py-1.5 text-center font-bold text-white focus:outline-none focus:border-amber-400">
+                    </div>
+                </div>
+
+                <!-- Squadra Casa -->
+                <div class="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
+                    <label class="block font-condensed font-bold text-sm uppercase tracking-wider text-red-400 mb-2">
+                        🏠 Squadra Casa
+                    </label>
+                    <input id="homeNameInput" type="text" maxlength="16" placeholder="Nome squadra casa"
+                        class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white font-bold uppercase mb-2.5 focus:outline-none focus:border-amber-400">
+                    
+                    <!-- Preset Colori Classici Subbuteo Casa -->
+                    <div class="mb-2.5">
+                        <span class="block text-[11px] text-zinc-400 mb-1.5">Colori classici Subbuteo:</span>
+                        <div id="homeColorPresets" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3 pt-1 border-t border-zinc-800/80">
+                        <label class="text-xs text-zinc-400 flex items-center gap-2">
+                            Base / Maglia:
+                            <input id="homePrimaryColor" type="color" value="#dc2626" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+                        </label>
+                        <label class="text-xs text-zinc-400 flex items-center gap-2">
+                            Piattello:
+                            <input id="homeSecondaryColor" type="color" value="#ffffff" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Squadra Ospiti -->
+                <div class="bg-zinc-950 p-3.5 rounded-xl border border-zinc-800">
+                    <label class="block font-condensed font-bold text-sm uppercase tracking-wider text-blue-400 mb-2">
+                        ✈️ Squadra Ospiti
+                    </label>
+                    <input id="awayNameInput" type="text" maxlength="16" placeholder="Nome squadra ospiti"
+                        class="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-white font-bold uppercase mb-2.5 focus:outline-none focus:border-amber-400">
+                    
+                    <!-- Preset Colori Classici Subbuteo Ospiti -->
+                    <div class="mb-2.5">
+                        <span class="block text-[11px] text-zinc-400 mb-1.5">Colori classici Subbuteo:</span>
+                        <div id="awayColorPresets" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-3 pt-1 border-t border-zinc-800/80">
+                        <label class="text-xs text-zinc-400 flex items-center gap-2">
+                            Base / Maglia:
+                            <input id="awayPrimaryColor" type="color" value="#2563eb" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+                        </label>
+                        <label class="text-xs text-zinc-400 flex items-center gap-2">
+                            Piattello:
+                            <input id="awaySecondaryColor" type="color" value="#ffffff" class="w-8 h-8 rounded cursor-pointer bg-transparent border-0">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Opzione Suono Gol -->
+                <label class="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800 cursor-pointer">
+                    <span class="text-xs sm:text-sm font-medium text-zinc-200">📣 Boato / coro stadio al gol</span>
+                    <input id="goalSoundCheckbox" type="checkbox" checked class="w-5 h-5 accent-emerald-500 rounded">
+                </label>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 mt-5">
+                <button onclick="closeSettingsModal()" class="py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold text-sm">
+                    Annulla
+                </button>
+                <button onclick="saveSettings()" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm uppercase tracking-wide">
+                    Salva e Applica
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE RINOMINA RAPIDA SQUADRA -->
+    <div id="renameModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border-2 border-zinc-600 rounded-2xl w-full max-w-xs p-5 shadow-2xl">
+            <h3 id="renameModalTitle" class="font-condensed font-bold text-lg uppercase tracking-wider text-amber-400 mb-3">
+                Rinomina Squadra
+            </h3>
+            <input id="quickRenameInput" type="text" maxlength="16"
+                class="w-full bg-zinc-950 border border-zinc-600 rounded-xl px-3 py-2.5 text-white font-bold uppercase text-center text-lg mb-4 focus:outline-none focus:border-amber-400">
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="closeRenameModal()" class="py-2 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-sm">Annulla</button>
+                <button onclick="confirmQuickRename()" class="py-2 rounded-xl bg-amber-500 text-zinc-950 font-bold text-sm">Conferma</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE STORICO EVENTI -->
+    <div id="logModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border-2 border-zinc-600 rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2.5 mb-3">
+                <h3 class="font-condensed font-bold text-lg uppercase tracking-wider text-amber-400">
+                    📋 Tabellino Eventi
+                </h3>
+                <button onclick="closeLogModal()" class="w-8 h-8 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white font-bold">✕</button>
+            </div>
+            <ul id="fullLogList" class="space-y-2 max-h-60 overflow-y-auto custom-scroll text-sm text-zinc-200">
+                <!-- Popolato via JS -->
+            </ul>
+            <div class="grid grid-cols-2 gap-2 mt-4">
+                <button onclick="shareMatchResult()" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
+                    📤 Condividi
+                </button>
+                <button onclick="closeLogModal()" class="py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-sm">
+                    Chiudi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE CONFERMA RESET -->
+    <div id="resetModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border-2 border-rose-700/70 rounded-2xl w-full max-w-xs p-5 shadow-2xl text-center">
+            <div class="text-3xl mb-2">⚠️</div>
+            <h3 class="font-condensed font-bold text-xl uppercase tracking-wider text-white mb-1">
+                Nuova Partita?
+            </h3>
+            <p class="text-xs text-zinc-400 mb-4">
+                Il punteggio tornerà a 0 - 0 e il cronometro ripartirà dal 1° Tempo.
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="closeResetModal()" class="py-2.5 rounded-xl bg-zinc-800 text-zinc-300 font-semibold text-sm">Annulla</button>
+                <button onclick="confirmResetMatch()" class="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm">Azzera Tutto</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 1. GENERATORE ICONA SUBBUTEO & PWA MANIFEST + SERVICE WORKER OFFLINE
+         */
+        function generateSubbuteoAppIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const s = size / 512; // Fattore di scala
+
+            // Sfondo panno verde Subbuteo
+            const bgGrad = ctx.createRadialGradient(256 * s, 220 * s, 40 * s, 256 * s, 256 * s, 360 * s);
+            bgGrad.addColorStop(0, '#166534');
+            bgGrad.addColorStop(1, '#0b3d1d');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, size, size);
+
+            // Righe bianche del campo Subbuteo
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.78)';
+            ctx.lineWidth = 10 * s;
+            ctx.strokeRect(34 * s, 34 * s, 444 * s, 444 * s);
+
+            // Linea di metà campo e cerchio centrale
+            ctx.beginPath();
+            ctx.moveTo(34 * s, 285 * s);
+            ctx.lineTo(478 * s, 285 * s);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(256 * s, 285 * s, 72 * s, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Ombra miniatura Subbuteo
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+            ctx.beginPath();
+            ctx.ellipse(230 * s, 345 * s, 108 * s, 34 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Basetta classica Subbuteo (emisfero bianco lucido)
+            const baseGrad = ctx.createLinearGradient(125 * s, 275 * s, 335 * s, 355 * s);
+            baseGrad.addColorStop(0, '#ffffff');
+            baseGrad.addColorStop(0.65, '#e2e8f0');
+            baseGrad.addColorStop(1, '#94a3b8');
+            ctx.fillStyle = baseGrad;
+            ctx.beginPath();
+            ctx.moveTo(128 * s, 288 * s);
+            ctx.bezierCurveTo(128 * s, 362 * s, 332 * s, 362 * s, 332 * s, 288 * s);
+            ctx.closePath();
+            ctx.fill();
+            ctx.lineWidth = 4 * s;
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.stroke();
+
+            // Piattello interno rosso/blu
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.ellipse(230 * s, 288 * s, 96 * s, 24 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Omino Subbuteo (gambe, pantaloncini, maglia rossa con banda blu, testa)
+            // Gambe
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(212 * s, 226 * s, 14 * s, 54 * s);
+            ctx.fillRect(234 * s, 226 * s, 14 * s, 54 * s);
+            // Calzettoni
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillRect(212 * s, 250 * s, 14 * s, 22 * s);
+            ctx.fillRect(234 * s, 250 * s, 14 * s, 22 * s);
+            // Pantaloncini bianchi
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(208 * s, 206 * s, 44 * s, 24 * s);
+            // Maglia rossa
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.roundRect(202 * s, 148 * s, 56 * s, 60 * s, 12 * s);
+            ctx.fill();
+            // Banda blu sul petto
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillRect(202 * s, 168 * s, 56 * s, 16 * s);
+            // Testa
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.arc(230 * s, 124 * s, 22 * s, 0, Math.PI * 2);
+            ctx.fill();
+            // Capelli
+            ctx.fillStyle = '#27272a';
+            ctx.beginPath();
+            ctx.arc(230 * s, 118 * s, 22 * s, Math.PI, Math.PI * 2);
+            ctx.fill();
+
+            // Pallone Subbuteo vintage oversize bianco/nero a destra
+            const ballX = 378 * s;
+            const ballY = 328 * s;
+            const ballR = 44 * s;
+            ctx.fillStyle = 'rgba(0,0,0,0.38)';
+            ctx.beginPath();
+            ctx.ellipse(ballX, ballY + 38 * s, 36 * s, 11 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 4 * s;
+            ctx.strokeStyle = '#18181b';
+            ctx.stroke();
+
+            // Pentagono centrale sul pallone
+            ctx.fillStyle = '#18181b';
+            ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                const px = ballX + Math.cos(angle) * 18 * s;
+                const py = ballY + Math.sin(angle) * 18 * s;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            return canvas.toDataURL('image/png');
+        }
+
+        function setupPWA() {
+            try {
+                const icon512 = generateSubbuteoAppIcon(512);
+                const icon180 = generateSubbuteoAppIcon(180);
+
+                // Imposta apple-touch-icon e favicon
+                document.getElementById('appleTouchIcon').href = icon180;
+                document.getElementById('faviconIcon').href = icon180;
+                const bannerIcon = document.getElementById('bannerAppIcon');
+                if (bannerIcon) bannerIcon.src = icon180;
+
+                // Genera Web App Manifest dinamico
+                const manifestObj = {
+                    name: 'Subbuteo Match Control',
+                    short_name: 'Subbuteo Match',
+                    description: 'Tabellone segnapunti, cronometro e fischietto arbitro in stile Subbuteo.',
+                    start_url: window.location.href,
+                    display: 'standalone',
+                    orientation: 'portrait',
+                    background_color: '#0f4d25',
+                    theme_color: '#0f4d25',
+                    icons: [
+                        { src: icon180, sizes: '180x180', type: 'image/png', purpose: 'any' },
+                        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+                    ]
+                };
+
+                const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+                const manifestUrl = URL.createObjectURL(manifestBlob);
+                document.getElementById('pwaManifest').href = manifestUrl;
+
+                // Registra Service Worker offline (se supportato dal protocollo HTTPS / localhost)
+                if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+                    const swCode = `
+                        const CACHE_NAME = 'subbuteo-match-pwa-v1';
+                        self.addEventListener('install', (event) => {
+                            self.skipWaiting();
+                            event.waitUntil(
+                                caches.open(CACHE_NAME).then((cache) => {
+                                    return cache.addAll([self.location.href]).catch(() => {});
+                                })
+                            );
+                        });
+                        self.addEventListener('activate', (event) => {
+                            event.waitUntil(self.clients.claim());
+                        });
+                        self.addEventListener('fetch', (event) => {
+                            event.respondWith(
+                                caches.match(event.request).then((cached) => {
+                                    return cached || fetch(event.request).then((response) => {
+                                        if (response && response.status === 200 && event.request.method === 'GET') {
+                                            const copy = response.clone();
+                                            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                                        }
+                                        return response;
+                                    }).catch(() => cached);
+                                })
+                            );
+                        });
+                    `;
+                    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                    const swUrl = URL.createObjectURL(swBlob);
+                    navigator.serviceWorker.register(swUrl).catch(() => {});
+                }
+            } catch (e) {
+                console.warn('Inizializzazione PWA fallback:', e);
+            }
+
+            checkInstallBannerVisibility();
+        }
+
+        function checkInstallBannerVisibility() {
+            const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+            const dismissed = localStorage.getItem('subbuteo_install_banner_dismissed') === '1';
+            const banner = document.getElementById('iosInstallBanner');
+            if (!isStandalone && !dismissed && banner) {
+                banner.classList.remove('hidden');
+            }
+        }
+
+        function dismissInstallBanner() {
+            localStorage.setItem('subbuteo_install_banner_dismissed', '1');
+            document.getElementById('iosInstallBanner').classList.add('hidden');
+        }
+
+        /**
+         * 2. STATO DELL'APPLICAZIONE & PERSISTENZA LOCALSTORAGE
+         */
+        const STORAGE_KEY = 'subbuteo_match_state_v1';
+
+        const CLASSIC_SUBBUTEO_KITS = [
+            { name: 'Rosso', primary: '#dc2626', secondary: '#ffffff' },
+            { name: 'Blu', primary: '#2563eb', secondary: '#ffffff' },
+            { name: 'Bianco', primary: '#f8fafc', secondary: '#18181b' },
+            { name: 'Nero', primary: '#18181b', secondary: '#ffffff' },
+            { name: 'Giallo', primary: '#eab308', secondary: '#18181b' },
+            { name: 'Verde', primary: '#16a34a', secondary: '#ffffff' },
+            { name: 'Granata', primary: '#881337', secondary: '#ffffff' },
+            { name: 'Azzurro', primary: '#0ea5e9', secondary: '#ffffff' }
+        ];
+
+        const state = {
+            homeName: 'CASA',
+            awayName: 'OSPITI',
+            homePrimary: '#dc2626',
+            homeSecondary: '#ffffff',
+            awayPrimary: '#2563eb',
+            awaySecondary: '#ffffff',
+            homeScore: 0,
+            awayScore: 0,
+            halfDurationSec: 600,
+            remainingSec: 600,
+            period: '1H', // '1H', 'HT', '2H', 'ET1', 'ET2', 'FT'
+            isRunning: false,
+            timerInterval: null,
+            isMuted: false,
+            goalSoundEnabled: true,
+            events: [],
+            renamingSide: null,
+            wakeLock: null
+        };
+
+        function saveStateToStorage() {
+            try {
+                const serializable = {
+                    homeName: state.homeName,
+                    awayName: state.awayName,
+                    homePrimary: state.homePrimary,
+                    homeSecondary: state.homeSecondary,
+                    awayPrimary: state.awayPrimary,
+                    awaySecondary: state.awaySecondary,
+                    homeScore: state.homeScore,
+                    awayScore: state.awayScore,
+                    halfDurationSec: state.halfDurationSec,
+                    remainingSec: state.remainingSec,
+                    period: state.period,
+                    isMuted: state.isMuted,
+                    goalSoundEnabled: state.goalSoundEnabled,
+                    events: state.events
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+            } catch (e) {}
+        }
+
+        function loadStateFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                Object.assign(state, saved);
+                state.isRunning = false;
+                state.timerInterval = null;
+                document.getElementById('muteIcon').textContent = state.isMuted ? '🔇' : '🔊';
+                if (state.events.length > 0) {
+                    document.getElementById('matchLog').textContent = state.events[0];
+                }
+            } catch (e) {}
+        }
+
+        /**
+         * 3. MOTORE AUDIO WEB AUDIO API (Sblocco automatico su iOS al primo tocco)
+         */
+        let audioCtx = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+        }
+
+        // Sblocca Web Audio al primo tocco ovunque sullo schermo (fondamentale su iOS Safari)
+        ['touchstart', 'pointerdown', 'click'].forEach(evt => {
+            document.addEventListener(evt, initAudioContext, { once: true, passive: true });
+        });
+
+        function triggerWhistleBlast(startTime, duration) {
+            if (state.isMuted) return;
+            initAudioContext();
+            if (!audioCtx) return;
+
+            const osc1 = audioCtx.createOscillator();
+            const osc2 = audioCtx.createOscillator();
+            const trillLfo = audioCtx.createOscillator();
+            const trillGain = audioCtx.createGain();
+            const masterGain = audioCtx.createGain();
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(2850, startTime);
+            filter.Q.setValueAtTime(2.5, startTime);
+
+            osc1.type = 'sine';
+            osc2.type = 'triangle';
+            osc1.frequency.setValueAtTime(2780, startTime);
+            osc2.frequency.setValueAtTime(2940, startTime);
+
+            trillLfo.type = 'sine';
+            trillLfo.frequency.setValueAtTime(34, startTime);
+            trillGain.gain.setValueAtTime(140, startTime);
+
+            trillLfo.connect(trillGain);
+            trillGain.connect(osc1.frequency);
+            trillGain.connect(osc2.frequency);
+
+            masterGain.gain.setValueAtTime(0.001, startTime);
+            masterGain.gain.exponentialRampToValueAtTime(0.45, startTime + 0.035);
+            masterGain.gain.setValueAtTime(0.42, startTime + duration - 0.05);
+            masterGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+            osc1.connect(filter);
+            osc2.connect(filter);
+            filter.connect(masterGain);
+            masterGain.connect(audioCtx.destination);
+
+            osc1.start(startTime);
+            osc2.start(startTime);
+            trillLfo.start(startTime);
+
+            osc1.stop(startTime + duration + 0.02);
+            osc2.stop(startTime + duration + 0.02);
+            trillLfo.stop(startTime + duration + 0.02);
+        }
+
+        function playSingleWhistle() {
+            if (state.isMuted) return;
+            initAudioContext();
+            if (!audioCtx) return;
+            triggerWhistleBlast(audioCtx.currentTime, 0.65);
+        }
+
+        function playHalfTimeWhistle() {
+            if (state.isMuted) return;
+            initAudioContext();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            triggerWhistleBlast(now, 0.35);
+            triggerWhistleBlast(now + 0.48, 0.95);
+        }
+
+        function playFullTimeWhistle() {
+            if (state.isMuted) return;
+            initAudioContext();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            triggerWhistleBlast(now, 0.32);
+            triggerWhistleBlast(now + 0.44, 0.32);
+            triggerWhistleBlast(now + 0.88, 1.25);
+        }
+
+        // Boato/coro stadio sintetizzato al gol
+        function playGoalRoar() {
+            if (state.isMuted || !state.goalSoundEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            // 1. Rumore filtrato per il boato della folla
+            const bufferSize = audioCtx.sampleRate * 1.1;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = noiseBuffer;
+
+            const crowdFilter = audioCtx.createBiquadFilter();
+            crowdFilter.type = 'bandpass';
+            crowdFilter.frequency.setValueAtTime(520, now);
+            crowdFilter.Q.setValueAtTime(0.9, now);
+
+            const crowdGain = audioCtx.createGain();
+            crowdGain.gain.setValueAtTime(0.001, now);
+            crowdGain.gain.exponentialRampToValueAtTime(0.28, now + 0.14);
+            crowdGain.gain.setValueAtTime(0.24, now + 0.65);
+            crowdGain.gain.exponentialRampToValueAtTime(0.001, now + 1.05);
+
+            noise.connect(crowdFilter);
+            crowdFilter.connect(crowdGain);
+            crowdGain.connect(audioCtx.destination);
+            noise.start(now);
+
+            // 2. Tromba/coro armonico da stadio
+            const freqs = [220, 277.18, 329.63];
+            freqs.forEach(freq => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, now);
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(920, now);
+
+                gain.gain.setValueAtTime(0.001, now);
+                gain.gain.exponentialRampToValueAtTime(0.09, now + 0.06);
+                gain.gain.setValueAtTime(0.075, now + 0.55);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.88);
+            });
+        }
+
+        /**
+         * 4. WAKE LOCK & STATO RETE
+         */
+        async function requestWakeLock() {
+            const statusEl = document.getElementById('wakeLockStatus');
+            if ('wakeLock' in navigator) {
+                try {
+                    state.wakeLock = await navigator.wakeLock.request('screen');
+                    statusEl.textContent = '🔒 Schermo sempre attivo';
+                    state.wakeLock.addEventListener('release', () => {
+                        statusEl.textContent = 'Tabellone pronto';
+                    });
+                } catch (err) {
+                    statusEl.textContent = 'Modalità risparmio attiva';
+                }
+            } else {
+                statusEl.textContent = 'Tabellone pronto';
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && state.isRunning) {
+                requestWakeLock();
+            }
+        });
+
+        function updateNetworkBadge() {
+            const badge = document.getElementById('offlineBadge');
+            if (!badge) return;
+            if (navigator.onLine) {
+                badge.textContent = 'PWA PRONTA';
+                badge.className = 'text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/30';
+            } else {
+                badge.textContent = 'MODALITÀ OFFLINE';
+                badge.className = 'text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40';
+            }
+        }
+        window.addEventListener('online', updateNetworkBadge);
+        window.addEventListener('offline', updateNetworkBadge);
+
+        /**
+         * 5. LOGICA CRONOMETRO E TEMPI DI GIOCO
+         */
+        function formatTime(totalSeconds) {
+            const safeSec = Math.max(0, Math.floor(totalSeconds));
+            const mins = Math.floor(safeSec / 60);
+            const secs = safeSec % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function getElapsedMinuteString() {
+            const halfMins = Math.floor(state.halfDurationSec / 60);
+            const activeDuration = (state.period === 'ET1' || state.period === 'ET2')
+                ? Math.max(60, Math.round(state.halfDurationSec / 2))
+                : state.halfDurationSec;
+            const elapsedInHalf = Math.max(0, activeDuration - state.remainingSec);
+
+            let baseOffset = 0;
+            if (state.period === '2H' || state.period === 'FT') baseOffset = halfMins;
+            else if (state.period === 'ET1') baseOffset = halfMins * 2;
+            else if (state.period === 'ET2') baseOffset = (halfMins * 2) + Math.floor(activeDuration / 60);
+
+            const currentMin = baseOffset + Math.floor(elapsedInHalf / 60) + 1;
+            return `${currentMin}'`;
+        }
+
+        function toggleTimer() {
+            initAudioContext();
+
+            if (state.period === 'HT') {
+                startSecondHalf();
+                return;
+            }
+
+            if (state.period === 'FT') {
+                openResetModal();
+                return;
+            }
+
+            if (state.isRunning) {
+                pauseTimer();
+            } else {
+                startTimer();
+            }
+        }
+
+        function startTimer() {
+            if (state.isRunning) return;
+            state.isRunning = true;
+            requestWakeLock();
+
+            const activeDuration = (state.period === 'ET1' || state.period === 'ET2')
+                ? Math.max(60, Math.round(state.halfDurationSec / 2))
+                : state.halfDurationSec;
+
+            if (state.remainingSec === activeDuration) {
+                playSingleWhistle();
+                const labels = {
+                    '1H': "Calcio d'inizio 1° Tempo!",
+                    '2H': "Inizio 2° Tempo!",
+                    'ET1': "Inizio 1° Tempo Supplementare!",
+                    'ET2': "Inizio 2° Tempo Supplementare!"
+                };
+                addLogEvent(labels[state.period] || "Calcio d'inizio!");
+            }
+
+            updateUI();
+            saveStateToStorage();
+
+            state.timerInterval = setInterval(() => {
+                if (state.remainingSec > 0) {
+                    state.remainingSec--;
+                    updateTimerDisplay();
+                    saveStateToStorage();
+                } else {
+                    handlePeriodEnd();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            state.isRunning = false;
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+            }
+            updateUI();
+            saveStateToStorage();
+        }
+
+        function handlePeriodEnd() {
+            pauseTimer();
+
+            if (state.period === '1H') {
+                state.period = 'HT';
+                playHalfTimeWhistle();
+                addLogEvent(`Fine 1° Tempo (${state.homeName} ${state.homeScore} - ${state.awayScore} ${state.awayName})`);
+            } else if (state.period === 'ET1') {
+                state.period = 'ET2';
+                state.remainingSec = Math.max(60, Math.round(state.halfDurationSec / 2));
+                playHalfTimeWhistle();
+                addLogEvent(`Fine 1° Tempo Supplementare (${state.homeScore} - ${state.awayScore})`);
+            } else {
+                state.period = 'FT';
+                playFullTimeWhistle();
+                addLogEvent(`FINE PARTITA! Risultato finale: ${state.homeScore} - ${state.awayScore}`);
+            }
+            updateUI();
+            saveStateToStorage();
+        }
+
+        function startSecondHalf() {
+            state.period = '2H';
+            state.remainingSec = state.halfDurationSec;
+            updateUI();
+            startTimer();
+        }
+
+        function startExtraTime() {
+            state.period = 'ET1';
+            state.remainingSec = Math.max(60, Math.round(state.halfDurationSec / 2));
+            updateUI();
+            startTimer();
+        }
+
+        function adjustTime(deltaSeconds) {
+            if (state.period === 'HT' || state.period === 'FT') return;
+            state.remainingSec = Math.max(0, Math.min(5400, state.remainingSec + deltaSeconds));
+            updateTimerDisplay();
+            saveStateToStorage();
+        }
+
+        /**
+         * 6. GESTIONE PUNTEGGIO E MINIATURE
+         */
+        function updateScore(team, delta) {
+            initAudioContext();
+            const isHome = team === 'home';
+            const currentScore = isHome ? state.homeScore : state.awayScore;
+            const newScore = Math.max(0, Math.min(99, currentScore + delta));
+
+            if (newScore === currentScore) return;
+
+            if (isHome) {
+                state.homeScore = newScore;
+            } else {
+                state.awayScore = newScore;
+            }
+
+            const cardEl = document.getElementById(isHome ? 'homeScoreCard' : 'awayScoreCard');
+            cardEl.classList.remove('score-flip');
+            void cardEl.offsetWidth;
+            cardEl.classList.add('score-flip');
+
+            if (delta > 0) {
+                playGoalRoar();
+                const board = document.getElementById('mainScoreboard');
+                board.classList.remove('goal-celebration');
+                void board.offsetWidth;
+                board.classList.add('goal-celebration');
+
+                const scorerTeam = isHome ? state.homeName : state.awayName;
+                addLogEvent(`⚽ ${getElapsedMinuteString()} GOL ${scorerTeam}! (${state.homeScore}-${state.awayScore})`);
+            } else {
+                const correctedTeam = isHome ? state.homeName : state.awayName;
+                addLogEvent(`↩️ Gol annullato a ${correctedTeam} (${state.homeScore}-${state.awayScore})`);
+            }
+
+            updateUI();
+            saveStateToStorage();
+        }
+
+        function updateSubbuteoFigureColors(svgId, primary, secondary) {
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+            const paths = svg.querySelectorAll('path, rect');
+            paths.forEach(el => el.setAttribute('fill', primary));
+            const ellipse = svg.querySelectorAll('ellipse')[1];
+            if (ellipse) ellipse.setAttribute('fill', secondary);
+        }
+
+        /**
+         * 7. AGGIORNAMENTO INTERFACCIA
+         */
+        function updateTimerDisplay() {
+            const timerEl = document.getElementById('timerDisplay');
+            timerEl.textContent = formatTime(state.remainingSec);
+
+            if (state.remainingSec <= 10 && state.remainingSec > 0 && state.period !== 'HT' && state.period !== 'FT') {
+                timerEl.classList.remove('text-amber-400');
+                timerEl.classList.add('text-rose-500');
+            } else {
+                timerEl.classList.remove('text-rose-500');
+                timerEl.classList.add('text-amber-400');
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('homeNameDisplay').textContent = state.homeName;
+            document.getElementById('awayNameDisplay').textContent = state.awayName;
+            document.getElementById('homeScoreDisplay').textContent = state.homeScore;
+            document.getElementById('awayScoreDisplay').textContent = state.awayScore;
+
+            updateSubbuteoFigureColors('homeFigureSvg', state.homePrimary, state.homeSecondary);
+            updateSubbuteoFigureColors('awayFigureSvg', state.awayPrimary, state.awaySecondary);
+
+            document.getElementById('halfDurationBadge').textContent = `Tempo: ${formatTime(state.halfDurationSec)}`;
+            updateTimerDisplay();
+
+            const periodBadge = document.getElementById('periodBadge');
+            const startBtn = document.getElementById('startPauseBtn');
+            const startIcon = document.getElementById('startPauseIcon');
+            const startText = document.getElementById('startPauseText');
+            const banner = document.getElementById('periodActionBanner');
+            const bannerText = document.getElementById('periodActionText');
+            const bannerBtn = document.getElementById('periodActionBtn');
+            const fullTimeExtras = document.getElementById('fullTimeExtras');
+
+            banner.classList.add('hidden');
+            fullTimeExtras.classList.add('hidden');
+
+            if (state.period === '1H') {
+                periodBadge.textContent = '1° TEMPO';
+                periodBadge.className = 'font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-emerald-600 text-white shadow';
+            } else if (state.period === 'HT') {
+                periodBadge.textContent = 'INTERVALLO';
+                periodBadge.className = 'font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-amber-500 text-zinc-950 shadow';
+                banner.classList.remove('hidden');
+                bannerText.textContent = 'Fine 1° Tempo! Pronto per la ripresa?';
+                bannerBtn.textContent = 'Inizia 2° Tempo';
+                bannerBtn.onclick = startSecondHalf;
+            } else if (state.period === '2H') {
+                periodBadge.textContent = '2° TEMPO';
+                periodBadge.className = 'font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-emerald-600 text-white shadow';
+            } else if (state.period === 'ET1') {
+                periodBadge.textContent = '1° SUPPL.';
+                periodBadge.className = 'font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-indigo-600 text-white shadow';
+            } else if (state.period === 'ET2') {
+                periodBadge.textContent = '2° SUPPL.';
+                periodBadge.className = 'font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-indigo-600 text-white shadow';
+            } else if (state.period === 'FT') {
+                periodBadge.textContent = 'FINE PARTITA';
+                periodBadge.className = 'font-condensed font-bold text-xs sm:text-sm uppercase tracking-widest px-3 py-0.5 rounded-full bg-rose-600 text-white shadow';
+                banner.classList.remove('hidden');
+                fullTimeExtras.classList.remove('hidden');
+                bannerText.textContent = 'Triplice fischio! Partita terminata.';
+                bannerBtn.textContent = 'Nuova Partita';
+                bannerBtn.onclick = openResetModal;
+            }
+
+            if (state.isRunning) {
+                startBtn.className = 'btn-tactile col-span-2 py-3 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 border border-amber-300 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2';
+                startIcon.textContent = '⏸';
+                startText.textContent = 'PAUSA';
+            } else {
+                startBtn.className = 'btn-tactile col-span-2 py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 font-condensed font-bold text-base sm:text-lg tracking-wider uppercase text-white flex items-center justify-center gap-2';
+                startIcon.textContent = '▶';
+                if (state.period === 'HT') {
+                    startText.textContent = 'AVVIA 2° TEMPO';
+                } else if (state.period === 'FT') {
+                    startText.textContent = 'NUOVA PARTITA';
+                } else if (state.remainingSec < state.halfDurationSec) {
+                    startText.textContent = 'RIPRENDI';
+                } else {
+                    startText.textContent = 'AVVIA TEMPO';
+                }
+            }
+        }
+
+        function addLogEvent(text) {
+            state.events.unshift(text);
+            document.getElementById('matchLog').textContent = text;
+            saveStateToStorage();
+        }
+
+        function toggleMute() {
+            state.isMuted = !state.isMuted;
+            document.getElementById('muteIcon').textContent = state.isMuted ? '🔇' : '🔊';
+            saveStateToStorage();
+        }
+
+        /**
+         * 8. CONDIVISIONE RISULTATO (Web Share API nativa iOS + fallback appunti)
+         */
+        function showToast(message) {
+            const toast = document.getElementById('toastNotice');
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2400);
+        }
+
+        async function shareMatchResult() {
+            const statusLabel = state.period === 'FT' ? 'RISULTATO FINALE' : 'AGGIORNAMENTO LIVE';
+            const goalsSummary = state.events
+                .filter(e => e.startsWith('⚽'))
+                .reverse()
+                .join('\n');
+
+            const shareText = `⚽ SUBBUTEO STADIUM (${statusLabel})\n${state.homeName} ${state.homeScore} - ${state.awayScore} ${state.awayName}${goalsSummary ? '\n\nMarcatori:\n' + goalsSummary : ''}`;
+
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Risultato Partita Subbuteo',
+                        text: shareText
+                    });
+                    return;
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return;
+                }
+            }
+
+            // Fallback copia negli appunti compatibile anche con iframe/Safari
+            const textArea = document.createElement('textarea');
+            textArea.value = shareText;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('📋 Risultato copiato negli appunti!');
+            } catch (e) {
+                showToast('Impossibile copiare il risultato');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        /**
+         * 9. MODALI & PRESET COLORI CLASSICI SUBBUTEO
+         */
+        function renderColorPresets() {
+            const homeContainer = document.getElementById('homeColorPresets');
+            const awayContainer = document.getElementById('awayColorPresets');
+            homeContainer.innerHTML = '';
+            awayContainer.innerHTML = '';
+
+            CLASSIC_SUBBUTEO_KITS.forEach(kit => {
+                // Pulsante Casa
+                const btnHome = document.createElement('button');
+                btnHome.type = 'button';
+                btnHome.title = kit.name;
+                btnHome.className = 'w-7 h-7 rounded-full border-2 border-zinc-500 flex items-center justify-center shadow hover:scale-110 transition-transform';
+                btnHome.style.backgroundColor = kit.primary;
+                btnHome.innerHTML = `<span class="w-3 h-3 rounded-full" style="background-color:${kit.secondary}"></span>`;
+                btnHome.onclick = () => {
+                    document.getElementById('homePrimaryColor').value = kit.primary;
+                    document.getElementById('homeSecondaryColor').value = kit.secondary;
+                };
+                homeContainer.appendChild(btnHome);
+
+                // Pulsante Ospiti
+                const btnAway = document.createElement('button');
+                btnAway.type = 'button';
+                btnAway.title = kit.name;
+                btnAway.className = 'w-7 h-7 rounded-full border-2 border-zinc-500 flex items-center justify-center shadow hover:scale-110 transition-transform';
+                btnAway.style.backgroundColor = kit.primary;
+                btnAway.innerHTML = `<span class="w-3 h-3 rounded-full" style="background-color:${kit.secondary}"></span>`;
+                btnAway.onclick = () => {
+                    document.getElementById('awayPrimaryColor').value = kit.primary;
+                    document.getElementById('awaySecondaryColor').value = kit.secondary;
+                };
+                awayContainer.appendChild(btnAway);
+            });
+        }
+
+        function openSettingsModal() {
+            renderColorPresets();
+            document.getElementById('halfMinutesInput').value = Math.max(1, Math.round(state.halfDurationSec / 60));
+            document.getElementById('homeNameInput').value = state.homeName;
+            document.getElementById('awayNameInput').value = state.awayName;
+            document.getElementById('homePrimaryColor').value = state.homePrimary;
+            document.getElementById('homeSecondaryColor').value = state.homeSecondary;
+            document.getElementById('awayPrimaryColor').value = state.awayPrimary;
+            document.getElementById('awaySecondaryColor').value = state.awaySecondary;
+            document.getElementById('goalSoundCheckbox').checked = state.goalSoundEnabled;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function setPresetMinutes(mins) {
+            document.getElementById('halfMinutesInput').value = mins;
+        }
+
+        function saveSettings() {
+            const mins = parseInt(document.getElementById('halfMinutesInput').value, 10);
+            const validMins = (!isNaN(mins) && mins >= 1 && mins <= 90) ? mins : 10;
+            const newDurationSec = validMins * 60;
+
+            const hName = document.getElementById('homeNameInput').value.trim().toUpperCase() || 'CASA';
+            const aName = document.getElementById('awayNameInput').value.trim().toUpperCase() || 'OSPITI';
+
+            state.homeName = hName;
+            state.awayName = aName;
+            state.homePrimary = document.getElementById('homePrimaryColor').value;
+            state.homeSecondary = document.getElementById('homeSecondaryColor').value;
+            state.awayPrimary = document.getElementById('awayPrimaryColor').value;
+            state.awaySecondary = document.getElementById('awaySecondaryColor').value;
+            state.goalSoundEnabled = document.getElementById('goalSoundCheckbox').checked;
+
+            if (newDurationSec !== state.halfDurationSec) {
+                const wasAtStart = state.remainingSec === state.halfDurationSec;
+                state.halfDurationSec = newDurationSec;
+                if (wasAtStart || !state.isRunning) {
+                    state.remainingSec = newDurationSec;
+                }
+            }
+
+            closeSettingsModal();
+            updateUI();
+            saveStateToStorage();
+        }
+
+        function quickRenameTeam(side) {
+            state.renamingSide = side;
+            const titleEl = document.getElementById('renameModalTitle');
+            const inputEl = document.getElementById('quickRenameInput');
+            titleEl.textContent = side === 'home' ? 'Nome Squadra Casa' : 'Nome Squadra Ospiti';
+            inputEl.value = side === 'home' ? state.homeName : state.awayName;
+            document.getElementById('renameModal').classList.remove('hidden');
+            setTimeout(() => inputEl.focus(), 50);
+        }
+
+        function closeRenameModal() {
+            document.getElementById('renameModal').classList.add('hidden');
+            state.renamingSide = null;
+        }
+
+        function confirmQuickRename() {
+            const val = document.getElementById('quickRenameInput').value.trim().toUpperCase();
+            if (state.renamingSide === 'home') {
+                state.homeName = val || 'CASA';
+            } else if (state.renamingSide === 'away') {
+                state.awayName = val || 'OSPITI';
+            }
+            closeRenameModal();
+            updateUI();
+            saveStateToStorage();
+        }
+
+        document.getElementById('quickRenameInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') confirmQuickRename();
+        });
+
+        function openLogModal() {
+            const listEl = document.getElementById('fullLogList');
+            listEl.innerHTML = '';
+            if (state.events.length === 0) {
+                listEl.innerHTML = '<li class="text-zinc-400 text-xs italic">Nessun evento registrato finora.</li>';
+            } else {
+                state.events.forEach(ev => {
+                    const li = document.createElement('li');
+                    li.className = 'p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-xs';
+                    li.textContent = ev;
+                    listEl.appendChild(li);
+                });
+            }
+            document.getElementById('logModal').classList.remove('hidden');
+        }
+
+        function closeLogModal() {
+            document.getElementById('logModal').classList.add('hidden');
+        }
+
+        function openResetModal() {
+            document.getElementById('resetModal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetModal').classList.add('hidden');
+        }
+
+        function confirmResetMatch() {
+            pauseTimer();
+            state.homeScore = 0;
+            state.awayScore = 0;
+            state.period = '1H';
+            state.remainingSec = state.halfDurationSec;
+            state.events = [];
+            document.getElementById('matchLog').textContent = "Partita azzerata. Pronto per il calcio d'inizio!";
+            closeResetModal();
+            updateUI();
+            saveStateToStorage();
+        }
+
+        // Inizializzazione all'avvio
+        window.onload = function() {
+            setupPWA();
+            loadStateFromStorage();
+            updateNetworkBadge();
+            updateUI();
+        };
+    </script>
+</body>
+</html>
