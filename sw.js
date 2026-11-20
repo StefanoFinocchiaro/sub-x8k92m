@@ -1,6 +1,6 @@
 const scope = new URL(self.registration.scope);
 const cachePrefix = `subbuteo-match:${scope.pathname}:`;
-const cacheName = `${cachePrefix}1`;
+const cacheName = `${cachePrefix}2`;
 const entry = new URL('./', scope).href;
 const assets = new Set(['./tailwind.css', './manifest.webmanifest', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png'].map(path => new URL(path, scope).href));
 

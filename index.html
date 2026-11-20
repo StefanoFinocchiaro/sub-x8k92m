@@ -474,36 +474,39 @@
         function triggerWhistleBlast(time, length) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
+            const mod = audioCtx.createOscillator();
+            const modGain = audioCtx.createGain();
             osc.type = 'triangle';
-            osc.frequency.setValueAtTime(2950, time);
+            osc.frequency.setValueAtTime(2800, time);
+            osc.frequency.linearRampToValueAtTime(2950, time + length / 2);
             osc.frequency.linearRampToValueAtTime(2800, time + length);
+            mod.type = 'sine';
+            mod.frequency.value = 60;
+            modGain.gain.value = 400;
+            mod.connect(modGain);
+            modGain.connect(osc.frequency);
             gain.gain.setValueAtTime(0, time);
-            gain.gain.linearRampToValueAtTime(0.4, time + 0.05);
-            gain.gain.linearRampToValueAtTime(0.4, time + length - 0.1);
+            gain.gain.linearRampToValueAtTime(1, time + 0.05);
+            gain.gain.linearRampToValueAtTime(1, time + length - 0.05);
             gain.gain.linearRampToValueAtTime(0, time + length);
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(time); osc.stop(time + length);
+            osc.start(time); mod.start(time);
+            osc.stop(time + length); mod.stop(time + length);
         }
 
         function playSingleWhistle() {
             if (state.isMuted) return;
             initAudioContext();
-            triggerWhistleBlast(audioCtx.currentTime, 0.45);
+            triggerWhistleBlast(audioCtx.currentTime, 0.4);
         }
 
-        function playHalfTimeWhistle() {
+        function playPeriodEndWhistle(fullTime = false) {
             if (state.isMuted) return;
             initAudioContext();
-            triggerWhistleBlast(audioCtx.currentTime, 0.35);
-            triggerWhistleBlast(audioCtx.currentTime + 0.5, 0.6);
-        }
-
-        function playFullTimeWhistle() {
-            if (state.isMuted) return;
-            initAudioContext();
-            triggerWhistleBlast(audioCtx.currentTime, 0.35);
-            triggerWhistleBlast(audioCtx.currentTime + 0.5, 0.35);
-            triggerWhistleBlast(audioCtx.currentTime + 1.0, 1.2);
+            const now = audioCtx.currentTime;
+            triggerWhistleBlast(now, 0.3);
+            triggerWhistleBlast(now + 0.4, 0.3);
+            if (fullTime) triggerWhistleBlast(now + 0.8, 1.0);
         }
 
         function playGoalRoar() {
@@ -663,10 +666,10 @@
                 state.isRunning = false;
                 releaseWakeLock();
                 if (state.period === 1 || state.period === 4) {
-                    playHalfTimeWhistle();
+                    playPeriodEndWhistle();
                     logEvent(`⏸ Fine ${state.period === 1 ? '1° Tempo' : '1° Supplementare'}`);
                 } else {
-                    playFullTimeWhistle();
+                    playPeriodEndWhistle(true);
                     logEvent(`⏹ Fine Partita (${state.homeScore} - ${state.awayScore})`);
                     state.period = state.period === 2 ? 3 : 6;
                 }
