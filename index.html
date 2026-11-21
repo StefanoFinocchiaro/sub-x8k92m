@@ -437,6 +437,12 @@
         let timerDeadline = 0;
         let audioCtx = null;
         let crowdNoise = null;
+        const stadiumAmbience = new Audio('./audio/stadium-ambience.mp3');
+        const goalRoar = new Audio('./audio/goal-roar.mp3');
+        stadiumAmbience.loop = true;
+        stadiumAmbience.preload = 'auto';
+        goalRoar.preload = 'auto';
+        let ambienceRequested = false;
         let activeTeamRename = null;
 
         function saveStateToStorage() {
@@ -452,8 +458,18 @@
 
         function toggleMute() {
             state.isMuted = !state.isMuted;
+            syncStadiumAmbience();
+            if (state.isMuted) goalRoar.pause();
             updateMuteButton();
             saveStateToStorage();
+        }
+
+        function syncStadiumAmbience() {
+            const shouldPlay = state.isRunning && !state.isMuted;
+            if (shouldPlay === ambienceRequested) return;
+            ambienceRequested = shouldPlay;
+            if (shouldPlay) stadiumAmbience.play().catch(() => {});
+            else stadiumAmbience.pause();
         }
 
         function updateMuteButton() {
@@ -512,6 +528,13 @@
 
         function playGoalRoar() {
             if (state.isMuted || !state.goalSoundEnabled) return;
+            goalRoar.currentTime = 0;
+            goalRoar.play().catch(error => {
+                if (error.name !== 'AbortError' && !state.isMuted && state.goalSoundEnabled) playSyntheticGoalRoar();
+            });
+        }
+
+        function playSyntheticGoalRoar() {
             initAudioContext();
             
             const now = audioCtx.currentTime, duration = 3.2;
@@ -608,6 +631,7 @@
         }
 
         function updateUI() {
+            syncStadiumAmbience();
             document.getElementById('homeNameDisplay').textContent = state.homeName;
             document.getElementById('awayNameDisplay').textContent = state.awayName;
             document.getElementById('homeScoreDisplay').textContent = state.homeScore;
